@@ -10,3 +10,12 @@ class Student(models.Model):
 
     def __str__(self):
         return self.user.usernam
+
+class ProgressLog(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='progress_logs')
+    date = models.DateField()
+    weight = models.FloatField()
+    bodyfat_percentage = models.FloatField(null=True, blank=True)
+    image = models.ImageField(upload_to='progress_images/', null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    

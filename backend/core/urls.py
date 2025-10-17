@@ -7,7 +7,6 @@ from student.views import StudentViewSet
 from teachers.views import TeacherViewSet
 from training.views import TrainingViewSet
 from users.views import UserViewSet
-
 from diet.views import FoodItemViewSet, DietPlanViewSet, MealViewSet
 
 router = routers.DefaultRouter()
@@ -24,4 +23,7 @@ router.register(r'meals', MealViewSet, basename='meal')
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
+    path('api/analytics/', include('analytics.urls')),
+    path('api/diet/', include('diet.urls')),
+    path('api/tracking/', include('tracking.urls')),
 ]

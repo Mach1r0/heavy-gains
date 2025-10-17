@@ -1,0 +1,3 @@
+esse é uma plataforma voltada para profissionais de educação física que pretendem otimizar a gestão de suas atividades e melhorar a experiência de seus alunos, tendo treinos e dieta disponíveis em um só lugar, voce terá acesso a ferramentas que facilitam o acompanhamento do progresso dos alunos, a criação de planos de treino personalizados e a criação de dietas adaptadas às necessidades individuais.
+
+para o aluno, voce terá acesso a seus treinos e dietas de forma prática e organizada,  podendo acompanhar seu progresso tanto no treino tanto na dieta e interagir com seu treinador diretamente pela plataforma.

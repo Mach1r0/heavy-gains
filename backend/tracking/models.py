@@ -16,6 +16,7 @@ class WorkoutSession(models.Model):
     ended_at = models.DateTimeField(null=True, blank=True)
     status = models.CharField(max_length=3, choices=STATUS_CHOICES, default='PLN')
     notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.workout.name} on {self.date} for {self.user.username}"
@@ -32,7 +33,7 @@ class ExerciseLog(models.Model):
     workout_exercise = models.ForeignKey('training.WorkoutExercise', on_delete=models.SET_NULL, null=True, blank=True)
     order = models.PositiveIntegerField() 
     notes = models.TextField(blank=True, null=True)
-    create_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['order']
@@ -48,6 +49,7 @@ class SetLog(models.Model):
         ('DROP', 'Drop Set'),
         ('FIN', 'Finisher'),
     ]
+    
     set_type = models.CharField(max_length=4, choices=TYPE, default='WORK')
     exercise_log = models.ForeignKey(ExerciseLog, on_delete=models.CASCADE, related_name='set_logs')
     set_number = models.PositiveIntegerField()
@@ -55,9 +57,13 @@ class SetLog(models.Model):
     weight = models.FloatField(help_text="Weight used in kg")
     rest_time = models.DurationField(help_text="Rest time after this set", null=True, blank=True)
     notes = models.TextField(blank=True, null=True)
+    is_pr = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta: 
         ordering = ['set_number']
     
     def __str__(self):
         return f"Set {self.set_number} of {self.exercise_log.exercise.name} in session {self.exercise_log.session.id}"
+
+        

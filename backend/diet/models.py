@@ -32,7 +32,7 @@ class DietPlan(models.Model):
         ('MAINT', 'Maintenance'),
     ]
     
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='diet_plans')
+    student = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='diet_plans')
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_diet_plans')
     name = models.CharField(max_length=150)
     goal = models.CharField(max_length=5, choices=GOAL)
@@ -41,7 +41,7 @@ class DietPlan(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.name} for {self.user.username}"
+        return f"{self.name} for {self.student.username}"
 
 class Meal(models.Model):
     diet_plan = models.ForeignKey(DietPlan, on_delete=models.CASCADE, related_name='meals')

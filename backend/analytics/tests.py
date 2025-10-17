@@ -1,3 +1,4 @@
 from django.test import TestCase
-
-# Create your tests here.
+from .models import PersonalRecord, BodyMeasurement, ProgressPhoto
+from rest_framework import viewsets
+from .serializers import PersonalRecordSerializer, BodyMeasurementSerializer, ProgressPhotoSerializer
