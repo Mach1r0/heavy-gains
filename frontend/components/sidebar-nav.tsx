@@ -86,7 +86,7 @@ export function SidebarNav({ userType }: SidebarNavProps) {
         {/* Logo */}
         <div className="flex h-16 items-center border-b border-sidebar-border px-6">
           <Dumbbell className="h-6 w-6 text-primary" />
-          <span className="ml-2 text-lg font-semibold text-sidebar-foreground">FitPro</span>
+          <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Heavy gains</span>
         </div>
 
         {/* Navigation */}

@@ -12,7 +12,7 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2">
           <Dumbbell className="h-8 w-8 text-primary" />
-          <span className="text-2xl font-bold">FitPro</span>
+          <span className="text-2xl font-bold">Heavy gains</span>
         </div>
 
         {/* Login Card */}

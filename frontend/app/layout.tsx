@@ -8,7 +8,7 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "FitPro - Gestão Fitness Profissional",
+  title: "Heavy gains - Gestão Fitness Profissional",
   description: "Plataforma completa para personal trainers e alunos",
   generator: "v0.app",
 }

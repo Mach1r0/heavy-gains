@@ -8,6 +8,11 @@ from teachers.views import TeacherViewSet
 from training.views import TrainingViewSet
 from users.views import UserViewSet
 from diet.views import FoodItemViewSet, DietPlanViewSet, MealViewSet
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
 
 router = routers.DefaultRouter()
 router.register(r'exercises', ExerciseViewSet, basename='exercise')
@@ -15,7 +20,6 @@ router.register(r'feedback', FeedbackViewSet, basename='feedback')
 router.register(r'students', StudentViewSet, basename='student')
 router.register(r'teachers', TeacherViewSet, basename='teacher')
 router.register(r'training', TrainingViewSet, basename='training')
-router.register(r'users', UserViewSet, basename='user')
 router.register(r'food-items', FoodItemViewSet, basename='fooditem')
 router.register(r'diet-plans', DietPlanViewSet, basename='dietplan')
 router.register(r'meals', MealViewSet, basename='meal')
@@ -26,4 +30,8 @@ urlpatterns = [
     path('api/analytics/', include('analytics.urls')),
     path('api/diet/', include('diet.urls')),
     path('api/tracking/', include('tracking.urls')),
+    path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/auth/', include('users.urls')),
 ]
