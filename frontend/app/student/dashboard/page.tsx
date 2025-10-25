@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -60,9 +61,18 @@ const mockTodayMeals = [
 ]
 
 export default function StudentDashboard() {
+  const { user, userType, isLoading } = useAuth()
   const [selectedTab, setSelectedTab] = useState("overview")
   const totalCalories = mockTodayMeals.reduce((sum, meal) => sum + meal.calories, 0)
   const consumedCalories = mockTodayMeals.filter((m) => m.completed).reduce((sum, meal) => sum + meal.calories, 0)
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -71,7 +81,7 @@ export default function StudentDashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Olá, {mockStudent.name.split(" ")[0]}!</h1>
+              <h1 className="text-2xl font-bold text-foreground">Olá, {user?.first_name || mockStudent.name.split(" ")[0]}!</h1>
               <p className="text-sm text-muted-foreground">Vamos treinar hoje?</p>
             </div>
             <div className="flex items-center gap-3">

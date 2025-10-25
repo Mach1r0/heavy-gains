@@ -5,25 +5,23 @@ import { Dumbbell, TrendingUp, Users, Apple, Activity, Target, Zap, Shield } fro
 export default function HomePage() {
   return (
     <div className="min-h-screen flex flex-col overflow-hidden bg-gradient-to-b from-background via-background to-primary/5">
-      {/* Animated Background Elements */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-pulse" />
         <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-pulse [animation-delay:1s]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-chart-3/5 rounded-full blur-3xl animate-pulse [animation-delay:2s]" />
       </div>
 
-      {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 group cursor-pointer">
+          <Link href="/" className="flex items-center gap-2 group cursor-pointer">
             <div className="relative">
               <Dumbbell className="h-7 w-7 text-primary transition-transform group-hover:rotate-180 duration-500" />
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:blur-lg transition-all" />
             </div>
             <span className="text-2xl font-black text-primary">
-              Heavy Gains
+                Heavy Gains
             </span>
-          </div>
+          </Link>
           <nav className="flex items-center gap-3">
             <Link href="/login">
               <Button variant="ghost" className="hover:scale-105 transition-transform">Entrar</Button>
@@ -37,10 +35,8 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
       <main className="flex-1 flex items-center justify-center px-4 py-20">
         <div className="max-w-6xl mx-auto text-center space-y-12">
-          {/* Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-sm opacity-0 animate-[fadeIn_0.8s_ease_forwards]">
             <Zap className="h-4 w-4 text-primary animate-pulse" />
             <span className="text-sm font-medium">Transforme vidas através do fitness</span>
@@ -77,7 +73,6 @@ export default function HomePage() {
             </Link>
           </div>
 
-          {/* Stats */}
           <div className="grid grid-cols-3 gap-8 max-w-2xl mx-auto pt-12 opacity-0 animate-[fadeIn_0.8s_ease_forwards_0.3s]">
             <div className="space-y-2">
               <div className="text-4xl font-bold text-primary">500+</div>
@@ -93,7 +88,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Features Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mt-20 opacity-0 animate-[fadeIn_0.8s_ease_forwards_0.4s]">
             <div className="group p-8 rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border hover:border-primary/50 space-y-4 hover:scale-105 transition-all duration-300 hover:shadow-2xl hover:shadow-primary/10">
               <div className="h-14 w-14 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -136,7 +130,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Trust Badge */}
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-8 opacity-0 animate-[fadeIn_0.8s_ease_forwards_0.5s]">
             <Shield className="h-4 w-4 text-primary" />
             <span>Seus dados estão seguros e protegidos</span>
@@ -144,7 +137,6 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border/50 bg-card/30 backdrop-blur-sm py-8">
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">

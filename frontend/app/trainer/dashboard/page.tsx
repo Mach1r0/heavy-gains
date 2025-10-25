@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -62,6 +63,7 @@ const mockStats = {
 }
 
 export default function TrainerDashboard() {
+  const { user, userType, isLoading } = useAuth()
   const [searchQuery, setSearchQuery] = useState("")
 
   const filteredStudents = mockStudents.filter(
@@ -69,6 +71,14 @@ export default function TrainerDashboard() {
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase()),
   )
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Carregando...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">

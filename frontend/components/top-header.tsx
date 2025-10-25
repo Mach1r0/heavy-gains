@@ -3,6 +3,7 @@
 import { Bell, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import Link from "next/link"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,6 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { authApi } from "@/lib/api/auth"
+import { useRouter } from "next/navigation"
 
 interface TopHeaderProps {
   userName: string
@@ -18,6 +21,13 @@ interface TopHeaderProps {
 }
 
 export function TopHeader({ userName, userType }: TopHeaderProps) {
+  const router = useRouter()
+
+  const handleLogout = () => {
+    authApi.logout()
+    router.push("/login")
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Search */}
@@ -81,9 +91,17 @@ export function TopHeader({ userName, userType }: TopHeaderProps) {
           <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem>Perfil</DropdownMenuItem>
-          <DropdownMenuItem>Configurações</DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link 
+              href={userType === "student" ? "/student/settings" : "/trainer/settings"}
+              className="w-full"
+            >
+              Configurações
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>Medidas</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Sair</DropdownMenuItem>
+          <DropdownMenuItem onClick={handleLogout}>Sair</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>

@@ -1,0 +1,35 @@
+services:
+  backend: 
+    build: ./backend
+    container_name: backend
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes: 
+      - ./backend:/app
+      - /app/.venv
+    ports: 
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    command: sh -c "pnpm install && pnpm run dev"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+      - CI=true
+    networks:
+      - app-network
+      
+networks:
+  app-network:
+    driver: bridge

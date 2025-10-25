@@ -8,7 +8,8 @@ class Teacher(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     bio = models.TextField(blank=True, null=True)
     specialties = models.CharField(max_length=255, blank=True, null=True)
-
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    
     def __str__(self):
         return self.user.username
         

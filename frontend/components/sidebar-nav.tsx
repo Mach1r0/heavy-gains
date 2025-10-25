@@ -38,11 +38,6 @@ export function SidebarNav({ userType }: SidebarNavProps) {
       href: "/trainer/messages",
       icon: MessageSquare,
     },
-    {
-      title: "Configurações",
-      href: "/trainer/settings",
-      icon: Settings,
-    },
   ]
 
   const studentLinks = [
@@ -71,11 +66,6 @@ export function SidebarNav({ userType }: SidebarNavProps) {
       href: "/student/messages",
       icon: MessageSquare,
     },
-    {
-      title: "Configurações",
-      href: "/student/settings",
-      icon: Settings,
-    },
   ]
 
   const links = userType === "trainer" ? trainerLinks : studentLinks
@@ -83,13 +73,13 @@ export function SidebarNav({ userType }: SidebarNavProps) {
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
       <div className="flex h-full flex-col">
-        {/* Logo */}
         <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-          <Dumbbell className="h-6 w-6 text-primary" />
-          <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Heavy gains</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Dumbbell className="h-6 w-6 text-primary" />
+            <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Heavy Gains</span>
+          </Link>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 space-y-1 p-4">
           {links.map((link) => {
             const isActive = pathname === link.href || pathname?.startsWith(link.href + "/")
@@ -111,7 +101,6 @@ export function SidebarNav({ userType }: SidebarNavProps) {
           })}
         </nav>
 
-        {/* User info */}
         <div className="border-t border-sidebar-border p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
