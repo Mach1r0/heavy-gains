@@ -12,6 +12,7 @@ class Teacher(models.Model):
     bio = models.TextField(blank=True, null=True)
     specialties = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
+    CREF = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return self.user.username
@@ -60,6 +61,7 @@ class ScheduleException(models.Model):
     
     def __str__(self):
         status = "Disponível" if self.is_available else "Indisponível"
+        
         return f"{self.teacher.user.username} - {self.date} ({status})"
     
     @staticmethod

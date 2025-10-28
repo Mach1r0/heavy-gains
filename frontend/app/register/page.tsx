@@ -19,7 +19,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Verificar se já está logado
   useEffect(() => {
     if (authApi.isAuthenticated()) {
       const userType = authApi.getUserType()
@@ -165,7 +164,6 @@ export default function RegisterPage() {
           <span className="text-2xl font-bold">Heavy gains</span>
         </div>
 
-        {/* Register Card */}
         <Card>
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl font-bold">Criar conta</CardTitle>
@@ -178,7 +176,6 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* User Type Tabs */}
             <Tabs value={userType} onValueChange={(v) => setUserType(v as "trainer" | "student")} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="trainer">Personal</TabsTrigger>

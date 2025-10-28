@@ -28,8 +28,6 @@ class UserViewSet(viewsets.ModelViewSet):
         
         return Response({
             'user': UserSerializer(user).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
     }, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
