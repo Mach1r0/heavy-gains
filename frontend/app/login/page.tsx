@@ -23,10 +23,11 @@ export default function LoginPage() {
   useEffect(() => {
     if (authApi.isAuthenticated()) {
       const userType = authApi.getUserType()
-      if (userType === 'student') {
-        router.push('/student/dashboard')
-      } else if (userType === 'teacher') {
-        router.push('/trainer/dashboard')
+      const user = authApi.getCurrentUser()
+      if (userType === 'student' && user) {
+        router.push(`/student/${user.id}/dashboard`)
+      } else if (userType === 'teacher' && user) {
+        router.push(`/trainer/${user.id}/dashboard`)
       }
     }
   }, [router])
@@ -38,12 +39,13 @@ export default function LoginPage() {
 
     try {
       const response = await authApi.login(credentials)
+      const user = authApi.getCurrentUser()
       
       // Redirecionar baseado no tipo de usuário
-      if (response.user_type === 'student') {
-        router.push('/student/dashboard')
-      } else if (response.user_type === 'teacher') {
-        router.push('/trainer/dashboard')
+      if (response.user_type === 'student' && user) {
+        router.push(`/student/${user.id}/dashboard`)
+      } else if (response.user_type === 'teacher' && user) {
+        router.push(`/trainer/${user.id}/dashboard`)
       }
     } catch (err: any) {
       console.error('Login error:', err)

@@ -11,7 +11,7 @@ export default function StudentLayout({
     <div className="flex min-h-screen">
       <SidebarNav userType="student" />
       <div className="flex-1 pl-64">
-        <TopHeader userName="João Silva" userType="student" />
+        <TopHeader />
         <main className="p-6">{children}</main>
       </div>
     </div>

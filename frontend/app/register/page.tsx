@@ -23,10 +23,11 @@ export default function RegisterPage() {
   useEffect(() => {
     if (authApi.isAuthenticated()) {
       const userType = authApi.getUserType()
-      if (userType === 'student') {
-        router.push('/student/dashboard')
-      } else if (userType === 'teacher') {
-        router.push('/trainer/dashboard')
+      const user = authApi.getCurrentUser()
+      if (userType === 'student' && user) {
+        router.push(`/student/${user.id}/dashboard`)
+      } else if (userType === 'teacher' && user) {
+        router.push(`/trainer/${user.id}/dashboard`)
       }
     }
   }, [router])
@@ -67,7 +68,7 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      await authApi.registerStudent({
+      const response = await authApi.registerStudent({
         username: studentData.username,
         email: studentData.email,
         password: studentData.password,
@@ -75,7 +76,10 @@ export default function RegisterPage() {
         last_name: studentData.last_name,
       })
 
-      router.push('/login')
+      const user = authApi.getCurrentUser()
+      if (user) {
+        router.push(`/student/${user.id}/dashboard`)
+      }
     } catch (err: any) {
       console.error('Registration error:', err)
       if (err.response?.data) {
@@ -116,7 +120,7 @@ export default function RegisterPage() {
     setIsLoading(true)
 
     try {
-      await authApi.registerTeacher({
+      const response = await authApi.registerTeacher({
         username: trainerData.username,
         email: trainerData.email,
         password: trainerData.password,
@@ -125,7 +129,10 @@ export default function RegisterPage() {
         specialization: trainerData.specialization,
       })
       
-      router.push('/login')
+      const user = authApi.getCurrentUser()
+      if (user) {
+        router.push(`/trainer/${user.id}/dashboard`)
+      }
     } catch (err: any) {
       console.error('Registration error:', err)
       if (err.response?.data) {

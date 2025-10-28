@@ -1,9 +1,11 @@
 "use client"
 
-import { Bell, Search } from "lucide-react"
+import { Bell, Search, Moon, Sun } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
+import { useEffect, useState } from "react"
+import { useTheme } from "next-themes"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,22 +17,34 @@ import {
 import { authApi } from "@/lib/api/auth"
 import { useRouter } from "next/navigation"
 
-interface TopHeaderProps {
-  userName: string
-  userType: "trainer" | "student"
-}
-
-export function TopHeader({ userName, userType }: TopHeaderProps) {
+export function TopHeader() {
   const router = useRouter()
+  const { theme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [userType, setUserType] = useState<"student" | "trainer" | null>(null)
+
+  useEffect(() => {
+    setMounted(true)
+    const currentUser = authApi.getCurrentUser()
+    const type = authApi.getUserType()
+    setUser(currentUser)
+    setUserType(type as "student" | "trainer")
+  }, [])
 
   const handleLogout = () => {
     authApi.logout()
     router.push("/login")
   }
 
+  if (!mounted || !user) {
+    return null
+  }
+
+  const userName = user.first_name || user.username
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      {/* Search */}
       <div className="flex-1">
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -42,7 +56,6 @@ export function TopHeader({ userName, userType }: TopHeaderProps) {
         </div>
       </div>
 
-      {/* Notifications */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="relative">
@@ -77,7 +90,16 @@ export function TopHeader({ userName, userType }: TopHeaderProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* User menu */}
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      >
+        <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+        <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+        <span className="sr-only">Toggle theme</span>
+      </Button>
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="gap-2">
@@ -93,13 +115,12 @@ export function TopHeader({ userName, userType }: TopHeaderProps) {
           <DropdownMenuItem>Perfil</DropdownMenuItem>
           <DropdownMenuItem>
             <Link 
-              href={userType === "student" ? "/student/settings" : "/trainer/settings"}
+              href={userType === "student" ? `/student/${user.id}/settings` : `/trainer/${user.id}/settings`}
               className="w-full"
             >
               Configurações
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>Medidas</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>Sair</DropdownMenuItem>
         </DropdownMenuContent>

@@ -3,7 +3,9 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { LayoutDashboard, Dumbbell, Apple, Users, MessageSquare, Settings, TrendingUp } from "lucide-react"
+import { LayoutDashboard, Dumbbell, Apple, Users, MessageSquare, Settings, TrendingUp, Video, Ruler} from "lucide-react"
+import { useEffect, useState } from "react"
+import { authApi } from "@/lib/api/auth"
 
 interface SidebarNavProps {
   userType: "trainer" | "student"
@@ -11,70 +13,96 @@ interface SidebarNavProps {
 
 export function SidebarNav({ userType }: SidebarNavProps) {
   const pathname = usePathname()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const user = authApi.getCurrentUser()
+    if (user) {
+      setUserId(user.id.toString())
+    }
+  }, [])
+
+  if (!userId) {
+    return null
+  }
 
   const trainerLinks = [
     {
       title: "Dashboard",
-      href: "/trainer/dashboard",
+      href: `/trainer/${userId}/dashboard`,
       icon: LayoutDashboard,
     },
     {
       title: "Alunos",
-      href: "/trainer/students",
+      href: `/trainer/${userId}/students`,
       icon: Users,
     },
     {
       title: "Treinos",
-      href: "/trainer/workouts",
+      href: `/trainer/${userId}/workouts`,
       icon: Dumbbell,
     },
     {
       title: "Dietas",
-      href: "/trainer/diets",
+      href: `/trainer/${userId}/diet`,
       icon: Apple,
     },
     {
-      title: "Chat",
-      href: "/trainer/messages",
-      icon: MessageSquare,
+      title: "Vídeo Aulas",
+      href: `/trainer/${userId}/videos`,
+      icon: Video,
+    },
+    {
+      title: "Configurações",
+      href: `/trainer/${userId}/settings`,
+      icon: Settings,
     },
   ]
 
   const studentLinks = [
     {
       title: "Dashboard",
-      href: "/student/dashboard",
+      href: `/student/${userId}/dashboard`,
       icon: LayoutDashboard,
     },
     {
       title: "Meus Treinos",
-      href: "/student/workout",
+      href: `/student/${userId}/workout`,
       icon: Dumbbell,
     },
     {
       title: "Minha Dieta",
-      href: "/student/diet",
+      href: `/student/${userId}/diet`,
       icon: Apple,
     },
     {
+      title: "Vídeo Aulas",
+      href: `/student/${userId}/videos`,
+      icon: Video,
+    },
+    {
       title: "Progresso",
-      href: "/student/progress",
+      href: `/student/${userId}/progress`,
       icon: TrendingUp,
     },
     {
-      title: "Chat",
-      href: "/student/messages",
-      icon: MessageSquare,
+      title: "Medidas",
+      href: `/student/${userId}/measurements`,
+      icon: Ruler,
     },
   ]
 
   const links = userType === "trainer" ? trainerLinks : studentLinks
 
+  const dashboardUrl = userType === "trainer" 
+    ? `/trainer/${userId}/dashboard` 
+    : `/student/${userId}/dashboard`
+
   return (
     <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-border bg-sidebar">
       <div className="flex h-full flex-col">
         <div className="flex h-16 items-center border-b border-sidebar-border px-6">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href={dashboardUrl} className="flex items-center gap-2">
             <Dumbbell className="h-6 w-6 text-primary" />
             <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Heavy Gains</span>
           </Link>

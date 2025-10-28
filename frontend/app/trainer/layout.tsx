@@ -11,7 +11,7 @@ export default function TrainerLayout({
     <div className="flex min-h-screen">
       <SidebarNav userType="trainer" />
       <div className="flex-1 pl-64">
-        <TopHeader userName="Carlos Silva" userType="trainer" />
+        <TopHeader />
         <main className="p-6">{children}</main>
       </div>
     </div>

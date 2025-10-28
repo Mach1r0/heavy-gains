@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useParams } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -61,6 +62,8 @@ const mockTodayMeals = [
 ]
 
 export default function StudentDashboard() {
+  const params = useParams()
+  const studentId = params.id as string
   const { user, userType, isLoading } = useAuth()
   const [selectedTab, setSelectedTab] = useState("overview")
   const totalCalories = mockTodayMeals.reduce((sum, meal) => sum + meal.calories, 0)
@@ -76,7 +79,6 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -101,7 +103,6 @@ export default function StudentDashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <Card className="p-4 bg-card border-border">
             <div className="flex items-center justify-between mb-2">
@@ -152,7 +153,6 @@ export default function StudentDashboard() {
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Today's Workout */}
               <Card className="p-6 bg-card border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-foreground">Treino de Hoje</h3>
@@ -171,12 +171,11 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                   <Button className="w-full" asChild>
-                    <Link href="/student/workout">Iniciar Treino</Link>
+                    <Link href={`/student/${studentId}/workout`}>Iniciar Treino</Link>
                   </Button>
                 </div>
               </Card>
 
-              {/* Today's Diet */}
               <Card className="p-6 bg-card border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-foreground">Dieta de Hoje</h3>
@@ -197,13 +196,12 @@ export default function StudentDashboard() {
                     </div>
                   </div>
                   <Button className="w-full bg-transparent" variant="outline" asChild>
-                    <Link href="/student/diet">Ver Dieta Completa</Link>
+                    <Link href={`/student/${studentId}/diet`}>Ver Dieta Completa</Link>
                   </Button>
                 </div>
               </Card>
             </div>
 
-            {/* Progress Chart */}
             <Card className="p-6 bg-card border-border">
               <h3 className="text-lg font-semibold text-foreground mb-4">Evolução de Peso</h3>
               <ResponsiveContainer width="100%" height={250}>

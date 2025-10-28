@@ -29,22 +29,26 @@ export function useAuth(requireAuth: boolean = true) {
 
         // Se está na página de login ou register e já está logado, redireciona para dashboard
         if (pathname === '/login' || pathname === '/register') {
-          if (currentUserType === 'student') {
-            router.push('/student/dashboard')
-          } else if (currentUserType === 'teacher') {
-            router.push('/trainer/dashboard')
+          if (currentUserType === 'student' && currentUser) {
+            router.push(`/student/${currentUser.id}/dashboard`)
+          } else if (currentUserType === 'teacher' && currentUser) {
+            router.push(`/trainer/${currentUser.id}/dashboard`)
           }
           return
         }
 
         // Verifica se está tentando acessar área errada
         if (pathname?.startsWith('/student/') && currentUserType !== 'student') {
-          router.push('/trainer/dashboard')
+          if (currentUser) {
+            router.push(`/trainer/${currentUser.id}/dashboard`)
+          }
           return
         }
 
         if (pathname?.startsWith('/trainer/') && currentUserType !== 'teacher') {
-          router.push('/student/dashboard')
+          if (currentUser) {
+            router.push(`/student/${currentUser.id}/dashboard`)
+          }
           return
         }
       }
