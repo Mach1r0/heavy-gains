@@ -1,12 +1,14 @@
 "use client"
 
-import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dumbbell, Search, Plus, Copy, Edit, Trash2, Users, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { authApi } from "@/lib/api/auth"
 
 // Mock data
 const mockWorkouts = [
@@ -59,6 +61,19 @@ export default function WorkoutsPage() {
     workout.name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
+    const pathname = usePathname()
+    const [userId, setUserId] = useState<string | null>(null)
+  
+    useEffect(() => {
+      const user = authApi.getCurrentUser()
+      if (user) {
+        setUserId(user.id.toString())
+      }
+    }, [])
+  
+    if (!userId) {
+      return null
+    }
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -67,7 +82,7 @@ export default function WorkoutsPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href="/trainer/dashboard">
+                <Link href={`/trainer/${userId}/dashboard`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
@@ -77,7 +92,7 @@ export default function WorkoutsPage() {
               </div>
             </div>
             <Button asChild>
-              <Link href="/trainer/workouts/new">
+              <Link href={`/trainer/${userId}/workouts/new`}>
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Treino
               </Link>
@@ -129,7 +144,7 @@ export default function WorkoutsPage() {
                     <Copy className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" asChild title="Editar">
-                    <Link href={`/trainer/workouts/${workout.id}/edit`}>
+                    <Link href={`/trainer/${userId}/workouts/${workout.id}/edit`}>
                       <Edit className="h-4 w-4" />
                     </Link>
                   </Button>
@@ -137,7 +152,7 @@ export default function WorkoutsPage() {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/trainer/workouts/${workout.id}`}>Ver Detalhes</Link>
+                    <Link href={`/trainer/${userId}/workouts/${workout.id}`}>Ver Detalhes</Link>
                   </Button>
                 </div>
               </div>

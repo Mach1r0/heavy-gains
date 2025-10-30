@@ -2,7 +2,11 @@ import * as React from 'react'
 
 import { cn } from '@/lib/utils'
 
-function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
+function Input({ className, type, value, onChange, ...props }: React.ComponentProps<'input'>) {
+  // If a `value` is provided without an `onChange`, make the field readOnly
+  // so React doesn't warn about a controlled input without a change handler.
+  const shouldBeReadOnly = value !== undefined && onChange === undefined && props.readOnly === undefined
+
   return (
     <input
       type={type}
@@ -13,6 +17,9 @@ function Input({ className, type, ...props }: React.ComponentProps<'input'>) {
         'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
         className,
       )}
+      value={value}
+      onChange={onChange}
+      readOnly={shouldBeReadOnly ? true : props.readOnly}
       {...props}
     />
   )

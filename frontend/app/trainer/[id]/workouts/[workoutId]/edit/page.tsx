@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +8,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Plus, GripVertical, Trash2, Save } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { authApi } from "@/lib/api/auth"
 
 interface Exercise {
   id: string
@@ -70,6 +72,20 @@ export default function EditWorkoutPage() {
     setExercises(exercises.map((ex) => (ex.id === id ? { ...ex, [field]: value } : ex)))
   }
 
+   const pathname = usePathname()
+    const [userId, setUserId] = useState<string | null>(null)
+  
+    useEffect(() => {
+      const user = authApi.getCurrentUser()
+      if (user) {
+        setUserId(user.id.toString())
+      }
+    }, [])
+  
+    if (!userId) {
+      return null
+    }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -78,7 +94,7 @@ export default function EditWorkoutPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href={`/trainer/workouts/${mockWorkout.id}`}>
+                <Link href={`/trainer/${userId}/workouts/${mockWorkout.id}`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>

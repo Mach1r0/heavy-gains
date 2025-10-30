@@ -5,8 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Edit, Copy, Trash2, Users, Clock, Dumbbell } from "lucide-react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { useEffect, useState } from "react"
+import { authApi } from "@/lib/api/auth"
 
-// Mock data
+// Mock 
 const mockWorkout = {
   id: 1,
   name: "Treino A - Peito e Tríceps",
@@ -74,6 +77,19 @@ export default function WorkoutDetailPage() {
     return acc + sets * 60 + (sets - 1) * rest
   }, 0)
 
+      const pathname = usePathname()
+      const [userId, setUserId] = useState<string | null>(null)
+    
+      useEffect(() => {
+        const user = authApi.getCurrentUser()
+        if (user) {
+          setUserId(user.id.toString())
+        }
+      }, [])
+    
+      if (!userId) {
+        return null
+      }
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -82,7 +98,7 @@ export default function WorkoutDetailPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href="/trainer/workouts">
+                <Link href={`/trainer/${userId}/workouts`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
@@ -100,7 +116,7 @@ export default function WorkoutDetailPage() {
                 Duplicar
               </Button>
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/trainer/workouts/${mockWorkout.id}/edit`}>
+                <Link href={`/trainer/${userId}/workouts/${mockWorkout.id}/edit`}>
                   <Edit className="h-4 w-4 mr-2" />
                   Editar
                 </Link>

@@ -59,13 +59,13 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 opacity-0 animate-[fadeIn_0.8s_ease_forwards_0.2s]">
-            <Link href="/register?type=trainer">
+            <Link href="/teacher-benefits">
               <Button size="lg" className="w-full sm:w-auto px-8 py-6 text-lg bg-primary hover:bg-primary/90 hover:scale-105 transition-all shadow-2xl shadow-primary/30">
                 <Users className="h-5 w-5 mr-2" />
                 Sou Personal Trainer
               </Button>
             </Link>
-            <Link href="/register?type=student">
+            <Link href="/student-benefits">
               <Button size="lg" variant="outline" className="w-full sm:w-auto px-8 py-6 text-lg border-2 hover:scale-105 transition-all hover:bg-primary/10 hover:border-primary">
                 <Target className="h-5 w-5 mr-2" />
                 Sou Aluno

@@ -1,9 +1,9 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { LayoutDashboard, Dumbbell, Apple, Users, MessageSquare, Settings, TrendingUp, Video, Ruler} from "lucide-react"
+import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
 
@@ -44,13 +44,18 @@ export function SidebarNav({ userType }: SidebarNavProps) {
     },
     {
       title: "Dietas",
-      href: `/trainer/${userId}/diet`,
+      href: `/trainer/${userId}/diets`,
       icon: Apple,
     },
     {
       title: "Vídeo Aulas",
       href: `/trainer/${userId}/videos`,
       icon: Video,
+    },
+    {
+      title: "Assistente IA",
+      href: `/ai-assistant`,
+      icon: MessageSquare,
     },
     {
       title: "Configurações",
