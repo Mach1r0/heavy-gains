@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Ruler, Camera, Plus, Edit2, Calendar } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import EditMeasurementsDialog from "@/components/measurements/EditMeasurementsDialog"
 
 // Mock data
 const mockMeasurements = [
@@ -74,6 +75,9 @@ const mockPhotos = [
 export default function MeasurementsPage() {
   const [isAddingMeasurement, setIsAddingMeasurement] = useState(false)
   const [isAddingPhoto, setIsAddingPhoto] = useState(false)
+  const [editingRecordId, setEditingRecordId] = useState<number | null>(null)
+
+  const currentEditingRecord = mockMeasurements.find((r) => r.id === editingRecordId)
 
   return (
     <div className="min-h-screen bg-background">
@@ -187,7 +191,7 @@ export default function MeasurementsPage() {
                         </p>
                       </div>
                     </div>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => setEditingRecordId(record.id)}>
                       <Edit2 className="h-4 w-4 mr-2" />
                       Editar
                     </Button>
@@ -245,6 +249,18 @@ export default function MeasurementsPage() {
                   </div>
                 </Card>
               ))}
+              {/* Edit dialog - shown when editingRecordId is set */}
+              <EditMeasurementsDialog
+                open={editingRecordId !== null}
+                onOpenChange={(open) => {
+                  if (!open) setEditingRecordId(null)
+                }}
+                record={currentEditingRecord}
+                onSave={(id, measurements) => {
+                  // TODO: persist changes to backend or state
+                  console.log("Save measurements for", id, measurements)
+                }}
+              />
             </div>
           </TabsContent>
 
