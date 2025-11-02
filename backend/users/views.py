@@ -85,9 +85,17 @@ class LoginViewSet(viewsets.ViewSet):
             'is_student': getattr(user, 'is_student', False),
             'profile_picture': user.profile_picture.url if user.profile_picture else None,
         }
+        
+        # Determine user type
+        user_type = None
+        if getattr(user, 'is_teacher', False):
+            user_type = 'teacher'
+        elif getattr(user, 'is_student', False):
+            user_type = 'student'
 
         return Response({
             'refresh': str(refresh),
             'access': str(refresh.access_token),
-            'user': user_data
+            'user': user_data,
+            'user_type': user_type
         }, status=status.HTTP_200_OK)

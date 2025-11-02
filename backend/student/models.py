@@ -18,6 +18,9 @@ class ProgressLog(models.Model):
     weight = models.FloatField()
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
-      
+    imc = models.FloatField(blank=True, null=True)
+    body_fat_percentage = models.FloatField(blank=True, null=True)
+
+    
     def __str__(self):
         return f"{self.student.user.username} - {self.date}"

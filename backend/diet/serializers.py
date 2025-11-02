@@ -1,10 +1,14 @@
+from teachers.serializers import TeacherSerializer
 from rest_framework import serializers
 from .models import Meal, DietPlan, MealFoodItem, FoodItem
+from student.serializers import StudentSerializer
+from training.serializers import trainingSerializer
 
 class FoodItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = FoodItem
-        fields = '__all__'
+        fields = ['id', 'name', 'calories', 'protein', 'carbs', 'fats', 'category']
+        read_only_fields = ['created_at', 'updated_at', 'id']
 
 class MealFoodItemSerializer(serializers.ModelSerializer):
     food_item = FoodItemSerializer(read_only=True)
@@ -15,10 +19,22 @@ class MealFoodItemSerializer(serializers.ModelSerializer):
         fields = ['id', 'food_item', 'food_item_id', 'quantity', 'unit']
 
 class DietPlanSerializer(serializers.ModelSerializer):
+    student = StudentSerializer(read_only=True)
+    teacher = TeacherSerializer(read_only=True)
+
     class Meta:
         model = DietPlan
-        fields = '__all__'
-
+        fields = [
+            'id',
+            'student',
+            'teacher',
+            'name',
+            'goal',
+            'start_date',
+            'end_date',
+            'is_active',
+        ]
+        read_only_fields = ['id', 'student', 'teacher', 'start_date', 'end_date', 'is_active']
 
 class MealSerializer(serializers.ModelSerializer):
     food_items = MealFoodItemSerializer(many=True)

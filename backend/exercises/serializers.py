@@ -4,4 +4,14 @@ from .models import Exercise
 class ExerciseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Exercise
-        fields = '__all__'
+        fields = [
+            'id',
+            'name', 
+            'description',
+            'muscle_group',
+            'video_url',
+            'image',
+            'created_at',
+            'updated_at',
+        ] 
+        read_only_fields = ['id', 'created_at', 'updated_at']

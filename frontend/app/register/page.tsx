@@ -22,7 +22,7 @@ export default function RegisterPage() {
   useEffect(() => {
     if (authApi.isAuthenticated()) {
       const userType = authApi.getUserType()
-      const user = authApi.getCurrentUser()
+      const user = authApi.getUserFromStorage()
       if (userType === 'student' && user) {
         router.push(`/student/${user.id}/dashboard`)
       } else if (userType === 'teacher' && user) {
@@ -75,10 +75,8 @@ export default function RegisterPage() {
         last_name: studentData.last_name,
       })
 
-      const user = authApi.getCurrentUser()
-      if (user) {
-        router.push(`/student/${user.id}/dashboard`)
-      }
+      // Registro bem-sucedido, redireciona para login
+      router.push('/login?registered=true')
     } catch (err: any) {
       console.error('Registration error:', err)
       if (err.response?.data) {
@@ -87,7 +85,7 @@ export default function RegisterPage() {
           setError(`Usuário: ${errorData.username[0]}`)
         } else if (errorData.email) {
           setError(`Email: ${errorData.email[0]}`)
-        } else if (errorData.password) {
+      } else if (errorData.password) {
           setError(`Senha: ${errorData.password[0]}`)
         } else if (errorData.detail) {
           setError(errorData.detail)
@@ -128,10 +126,8 @@ export default function RegisterPage() {
         specialization: trainerData.specialization,
       })
       
-      const user = authApi.getCurrentUser()
-      if (user) {
-        router.push(`/trainer/${user.id}/dashboard`)
-      }
+      // Registro bem-sucedido, redireciona para login
+      router.push('/login?registered=true')
     } catch (err: any) {
       console.error('Registration error:', err)
       if (err.response?.data) {
@@ -361,7 +357,6 @@ export default function RegisterPage() {
           </CardFooter>
         </Card>
 
-        {/* Back to Home */}
         <div className="text-center">
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             ← Voltar para home

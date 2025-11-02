@@ -14,8 +14,19 @@ class WorkoutSerializer(serializers.ModelSerializer):
         fields = ['id', 'training_plan', 'name', 'day_of_week', 'workout_exercises']
 
 class trainingSerializer(serializers.ModelSerializer):
-    workouts = WorkoutSerializer(many=True, read_only=True)
-    
+    Student = serializers.StringRelatedField(read_only=True)
+    Teacher = serializers.StringRelatedField(read_only=True)
     class Meta:
         model = Training
-        fields = '__all__'
+        fields = [ 
+            'id',
+            'Student',
+            'Teacher', 
+            'goal', 
+            'name', 
+            'description', 
+            'start_date', 
+            'end_date', 
+            'is_active'
+        ]
+        read_only_fields = ['id', 'start_date', 'end_date', 'is_active']

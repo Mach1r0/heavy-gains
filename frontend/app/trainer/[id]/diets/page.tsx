@@ -81,7 +81,7 @@ export default function DietsPage() {
 
   // Separate hook to get current user (must be top-level)
   useEffect(() => {
-    const user = authApi.getCurrentUser()
+    const user = authApi.getUserFromStorage()
     if (user) {
       setUserId(user.id.toString())
     }

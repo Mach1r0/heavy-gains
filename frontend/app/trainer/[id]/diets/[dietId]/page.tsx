@@ -137,7 +137,7 @@ export default function EditDietPage() {
     const [userId, setUserId] = useState<string | null>(null)
 
     useEffect(() => {
-      const user = authApi.getCurrentUser()
+      const user = authApi.getUserFromStorage()
       if (user) {
         setUserId(user.id.toString())
       }

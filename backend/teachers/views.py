@@ -22,22 +22,19 @@ class TeacherViewSet(viewsets.ModelViewSet):
 
         teacher = serializer.save()
 
-        refresh = RefreshToken.for_user(teacher.user)
-
         return Response({
+            'message': 'Conta criada com sucesso! Faça login para continuar.',
             'teacher': TeacherSerializer(teacher).data,
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
             'user_type': 'teacher'
         }, status=status.HTTP_201_CREATED)
 
-        def update(self, request, *args, **kwargs):
-            instance = self.get_object()
-            serializer = self.get_serializer(instance, data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            profile_picture = request.FILES.get('profile_picture')
-            if profile_picture:
-                serializer.save(profile_picture=profile_picture)
-            else:
-                serializer.save()
-            return Response(serializer.data)
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        profile_picture = request.FILES.get('profile_picture')
+        if profile_picture:
+            serializer.save(profile_picture=profile_picture)
+        else:
+            serializer.save()
+        return Response(serializer.data)

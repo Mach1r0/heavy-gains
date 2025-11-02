@@ -26,7 +26,7 @@ export function TopHeader() {
 
   useEffect(() => {
     setMounted(true)
-    const currentUser = authApi.getCurrentUser()
+    const currentUser = authApi.getUserFromStorage()
     const type = authApi.getUserType()
     setUser(currentUser)
     setUserType(type as "student" | "trainer")
@@ -37,17 +37,18 @@ export function TopHeader() {
     router.push("/login")
   }
 
-  if (!mounted || !user) {
-    return null
-  }
-
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light"
     setTheme(newTheme)
     localStorage.setItem("theme", newTheme)
     document.documentElement.classList.toggle("dark", newTheme === "dark")
   }
-  const userName = user.first_name || user.username
+
+  if (!mounted || !user) {
+    return null
+  }
+
+  const userName = user?.first_name || user?.username || "User"
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">

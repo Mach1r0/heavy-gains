@@ -14,7 +14,7 @@ export function useAuth(requireAuth: boolean = true) {
   useEffect(() => {
     const checkAuth = () => {
       const isAuthenticated = authApi.isAuthenticated()
-      const currentUser = authApi.getCurrentUser()
+      const currentUser = authApi.getUserFromStorage()
       const currentUserType = authApi.getUserType()
 
       if (!isAuthenticated && requireAuth) {

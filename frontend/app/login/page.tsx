@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,18 +12,25 @@ import { authApi } from "@/lib/api/auth"
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [credentials, setCredentials] = useState({
     username: '',
     password: ''
   })
   const [error, setError] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
-  // Verificar se já está logado
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
+      setSuccessMessage('Conta criada com sucesso! Faça login para continuar.')
+    }
+  }, [searchParams])
+
   useEffect(() => {
     if (authApi.isAuthenticated()) {
       const userType = authApi.getUserType()
-      const user = authApi.getCurrentUser()
+      const user = authApi.getUserFromStorage()
       if (userType === 'student' && user) {
         router.push(`/student/${user.id}/dashboard`)
       } else if (userType === 'teacher' && user) {
@@ -39,18 +46,15 @@ export default function LoginPage() {
 
     try {
       const response = await authApi.login(credentials)
-      const user = authApi.getCurrentUser()
       
-      // Redirecionar baseado no tipo de usuário
-      if (response.user_type === 'student' && user) {
-        router.push(`/student/${user.id}/dashboard`)
-      } else if (response.user_type === 'teacher' && user) {
-        router.push(`/trainer/${user.id}/dashboard`)
+      if (response.user.is_student) {
+        router.push(`/student/${response.user.id}/dashboard`)
+      } else if (response.user.is_teacher) {
+        router.push(`/trainer/${response.user.id}/dashboard`)
       }
     } catch (err: any) {
       console.error('Login error:', err)
       if (err.response?.data) {
-        // Erro da API
         const errorData = err.response.data
         if (errorData.detail) {
           setError(errorData.detail)
@@ -81,6 +85,11 @@ export default function LoginPage() {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {successMessage && (
+                <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+                  {successMessage}
+                </div>
+              )}
               {error && (
                 <div className="p-3 text-sm text-red-500 bg-red-50 border border-red-200 rounded-md">
                   {error}

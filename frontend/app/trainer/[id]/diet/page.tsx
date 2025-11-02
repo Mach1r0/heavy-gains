@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,9 +9,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Plus, GripVertical, Trash2, Save } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
-import { authApi } from "@/lib/api/auth"
 
 interface Meal {
   id: string
@@ -30,19 +28,50 @@ interface Food {
   fat: string
 }
 
-export default function NewDietPage() {
-  const [dietName, setDietName] = useState("")
-  const [category, setCategory] = useState("")
-  const [targetCalories, setTargetCalories] = useState("")
-  const [description, setDescription] = useState("")
-  const [meals, setMeals] = useState<Meal[]>([
+// Mock data
+const mockDiet = {
+  id: 1,
+  name: "Dieta Hipertrofia 3000 kcal",
+  category: "hipertrofia",
+  targetCalories: "3000",
+  description: "Plano alimentar focado em ganho de massa muscular com distribuição balanceada de macronutrientes.",
+  meals: [
     {
       id: "1",
       name: "Café da Manhã",
       time: "07:00",
-      foods: [{ id: "1", name: "", quantity: "", unit: "g", calories: "", protein: "", carbs: "", fat: "" }],
+      foods: [
+        {
+          id: "1",
+          name: "Aveia",
+          quantity: "80",
+          unit: "g",
+          calories: "304",
+          protein: "10.7",
+          carbs: "54.8",
+          fat: "5.4",
+        },
+        {
+          id: "2",
+          name: "Banana",
+          quantity: "1",
+          unit: "un",
+          calories: "105",
+          protein: "1.3",
+          carbs: "27",
+          fat: "0.4",
+        },
+      ],
     },
-  ])
+  ],
+}
+
+export default function EditDietPage() {
+  const [dietName, setDietName] = useState(mockDiet.name)
+  const [category, setCategory] = useState(mockDiet.category)
+  const [targetCalories, setTargetCalories] = useState(mockDiet.targetCalories)
+  const [description, setDescription] = useState(mockDiet.description)
+  const [meals, setMeals] = useState<Meal[]>(mockDiet.meals)
 
   const addMeal = () => {
     const newMeal: Meal = {
@@ -101,20 +130,6 @@ export default function NewDietPage() {
     )
   }
 
-        const pathname = usePathname()
-        const [userId, setUserId] = useState<string | null>(null)
-      
-        useEffect(() => {
-          const user = authApi.getUserFromStorage()
-          if (user) {
-            setUserId(user.id.toString())
-          }
-        }, [])
-      
-        if (!userId) {
-          return null
-        }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -123,22 +138,22 @@ export default function NewDietPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href={`/trainer/${userId}/diets`}>
+                <Link href={`/trainer/diets/${mockDiet.id}`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Nova Dieta</h1>
-                <p className="text-sm text-muted-foreground">Crie um plano alimentar personalizado</p>
+                <h1 className="text-2xl font-bold text-foreground">Editar Dieta</h1>
+                <p className="text-sm text-muted-foreground">Atualize as informações da dieta</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
-                <Link href="/trainer/diets">Cancelar</Link>
+                <Link href={`/trainer/diets/${mockDiet.id}`}>Cancelar</Link>
               </Button>
               <Button>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Dieta
+                Salvar Alterações
               </Button>
             </div>
           </div>
@@ -202,7 +217,7 @@ export default function NewDietPage() {
           </div>
         </Card>
 
-        {/* Meals */}
+        {/* Meals - Same structure as new page */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-foreground">Refeições</h2>
@@ -251,7 +266,6 @@ export default function NewDietPage() {
                     </div>
                   </div>
 
-                  {/* Foods */}
                   <div className="space-y-3 pl-4 border-l-2 border-border">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm font-medium">Alimentos</Label>
@@ -386,7 +400,6 @@ export default function NewDietPage() {
           ))}
         </div>
 
-        {/* Add Meal Button */}
         <Button onClick={addMeal} variant="outline" className="w-full bg-transparent">
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Refeição

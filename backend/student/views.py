@@ -21,13 +21,10 @@ class StudentViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         
         student = serializer.save()
-        
-        refresh = RefreshToken.for_user(student.user)
 
         return Response({
-            'student': StudentSerializer(student).data, 
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'message': 'Conta criada com sucesso! Faça login para continuar.',
+            'student': StudentSerializer(student).data,
             'user_type': 'student'
         }, status=status.HTTP_201_CREATED)
     
