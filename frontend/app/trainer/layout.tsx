@@ -1,6 +1,7 @@
 import type React from "react"
 import { SidebarNav } from "@/components/sidebar-nav"
 import { TopHeader } from "@/components/top-header"
+import { RoleProtectedRoute } from "@/components/RoleProtectedRoute"
 
 export default function TrainerLayout({
   children,
@@ -8,12 +9,14 @@ export default function TrainerLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen">
-      <SidebarNav userType="trainer" />
-      <div className="flex-1 pl-64">
-        <TopHeader />
-        <main className="p-6">{children}</main>
+    <RoleProtectedRoute allowedRole="teacher">
+      <div className="flex min-h-screen">
+        <SidebarNav userType="trainer" />
+        <div className="flex-1 pl-64">
+          <TopHeader />
+          <main className="p-6">{children}</main>
+        </div>
       </div>
-    </div>
+    </RoleProtectedRoute>
   )
 }

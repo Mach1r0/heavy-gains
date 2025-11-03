@@ -24,11 +24,7 @@ class UserViewSet(viewsets.ModelViewSet):
         
         user = serializer.save()
         
-        refresh = RefreshToken.for_user(user)
-        
-        return Response({
-            'user': UserSerializer(user).data,
-    }, status=status.HTTP_201_CREATED)
+        return Response({"message": "User created successfully"}, status=status.HTTP_201_CREATED)
 
     def perform_create(self, serializer):
         profile_picture = self.request.FILES.get('profile_picture')
@@ -46,7 +42,6 @@ class UserViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        """Retorna dados do usuário logado"""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
 
@@ -86,7 +81,6 @@ class LoginViewSet(viewsets.ViewSet):
             'profile_picture': user.profile_picture.url if user.profile_picture else None,
         }
         
-        # Determine user type
         user_type = None
         if getattr(user, 'is_teacher', False):
             user_type = 'teacher'

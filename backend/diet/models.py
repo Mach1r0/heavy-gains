@@ -86,3 +86,16 @@ class MealFoodItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity}{self.unit} of {self.food_item.name}"
+    
+
+class MealRegistration(models.Model):
+    meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name='registrations')
+    date = models.DateField()
+    consumed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('meal', 'date')
+
+    def __str__(self):
+        return f"Registration of {self.meal.name} on {self.date}"
+      

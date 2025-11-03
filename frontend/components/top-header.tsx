@@ -38,13 +38,10 @@ export function TopHeader() {
   }
 
   const toggleTheme = () => {
-    const newTheme = theme === "light" ? "dark" : "light"
-    setTheme(newTheme)
-    localStorage.setItem("theme", newTheme)
-    document.documentElement.classList.toggle("dark", newTheme === "dark")
+    setTheme(theme === "light" ? "dark" : "light")
   }
 
-  if (!mounted || !user) {
+  if (!user) {
     return null
   }
 
@@ -97,9 +94,15 @@ export function TopHeader() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
-              {theme === "light" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-            </Button>
+      <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Alternar tema">
+        {!mounted ? (
+          <Sun className="h-5 w-5" />
+        ) : theme === "light" ? (
+          <Moon className="h-5 w-5" />
+        ) : (
+          <Sun className="h-5 w-5" />
+        )}
+      </Button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

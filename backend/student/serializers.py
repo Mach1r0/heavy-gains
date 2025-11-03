@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Student
+from .models import PhotosStudent, ProgressLog, Student
 from users.models import User
 
 class StudentSerializer(serializers.ModelSerializer):
@@ -68,3 +68,18 @@ class StudentSerializer(serializers.ModelSerializer):
         instance.height = validated_data.get('height', instance.height)
         instance.save()
         return instance
+
+class ProgressLogSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProgressLog
+        fields = [
+            'id', 'student', 'date', 'goal_weight', 'current_weight', 'start_weight',
+            'notes', 'created_at', 'imc', 'body_fat_percentage', 'photos'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+class PhotosStudentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PhotosStudent
+        fields = ['id', 'student', 'photo', 'description', 'uploaded_at', 'position']
+        read_only_fields = ['id', 'uploaded_at']

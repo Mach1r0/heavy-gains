@@ -54,7 +54,7 @@ export function SidebarNav({ userType }: SidebarNavProps) {
     },
     {
       title: "Assistente IA",
-      href: `/ai-assistant`,
+      href: `/trainer/${userId}/ai-assistant`,
       icon: MessageSquare,
     },
     {
@@ -89,6 +89,11 @@ export function SidebarNav({ userType }: SidebarNavProps) {
       title: "Progresso",
       href: `/student/${userId}/progress`,
       icon: TrendingUp,
+    },
+    {
+      title: "Assistente IA",
+      href: `/student/${userId}/ai-assistant`,
+      icon: MessageSquare,
     },
     {
       title: "Medidas",

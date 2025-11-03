@@ -21,12 +21,6 @@ class WorkoutSession(models.Model):
     def __str__(self):
         return f"{self.workout.name} on {self.date} for {self.user.username}"
     
-    @property
-    def total_duration(self):
-        if self.started_at and self.ended_at:
-            return (self.ended_at - self.started_at).total_seconds() / 60.0  
-        return 0
-
 class ExerciseLog(models.Model):
     session = models.ForeignKey(WorkoutSession, on_delete=models.CASCADE, related_name='exercise_logs')
     exercise = models.ForeignKey('exercises.Exercise', on_delete=models.PROTECT)

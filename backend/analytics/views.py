@@ -1,7 +1,6 @@
 from django.shortcuts import render
-from rest_framework import viewsets
+from rest_framework import viewsets, permissions
 from .serializers import PersonalRecordSerializer, BodyMeasurementSerializer, ProgressPhotoSerializer
-from rest_framework import permissions
 from .models import PersonalRecord, BodyMeasurement, ProgressPhoto
 
 class PersonalRecordViewSet(viewsets.ModelViewSet):
