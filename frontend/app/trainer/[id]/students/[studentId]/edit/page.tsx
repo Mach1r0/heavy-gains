@@ -4,9 +4,9 @@ import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { userAgent } from "next/server"
 
-export default function EditStudentPage({ params }: { params: { id: string } }) {
+export default function EditStudentPage({ params }: { params: { id: string, studentId: string } }) {
   const student = {
-    id: params.id,
+    id: params.studentId,
     name: "João Silva",
     email: "joao@example.com",
     phone: "(11) 98765-4321",
@@ -20,7 +20,7 @@ export default function EditStudentPage({ params }: { params: { id: string } }) 
       <NavHeader />
       <main className="container mx-auto px-4 py-8">
         <Link
-          href={`trainer/${userId}/students/`}
+          href={`/trainer/${params.id}/students/${params.studentId}`}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />

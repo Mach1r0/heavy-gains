@@ -8,9 +8,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Plus, GripVertical, Trash2, Save } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
+import { createDietPlan } from "@/lib/api"
+import { getTeacherByUserId, getTeacherStudents } from "@/lib/api/teachers"
+import { useToast } from "@/hooks/use-toast"
 
 interface Meal {
   id: string
@@ -30,11 +33,25 @@ interface Food {
   fat: string
 }
 
+interface Student {
+  id: number
+  student_id: number
+  student_name: string
+  student_user_id: number
+  is_active: boolean
+}
+
 export default function NewDietPage() {
+  const router = useRouter()
+  const { toast } = useToast()
   const [dietName, setDietName] = useState("")
   const [category, setCategory] = useState("")
   const [targetCalories, setTargetCalories] = useState("")
   const [description, setDescription] = useState("")
+  const [studentId, setStudentId] = useState("")
+  const [students, setStudents] = useState<Student[]>([])
+  const [loadingStudents, setLoadingStudents] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [meals, setMeals] = useState<Meal[]>([
     {
       id: "1",
@@ -101,23 +118,176 @@ export default function NewDietPage() {
     )
   }
 
-        const pathname = usePathname()
-        const [userId, setUserId] = useState<string | null>(null)
+  // Mapeamento de categorias frontend → backend
+  const mapCategoryToGoal = (category: string): 'BUK' | 'CUT' | 'MAINT' => {
+    const mapping: Record<string, 'BUK' | 'CUT' | 'MAINT'> = {
+      'hipertrofia': 'BUK',
+      'emagrecimento': 'CUT',
+      'manutencao': 'MAINT',
+      'lowcarb': 'CUT',
+      'vegetariana': 'MAINT',
+    }
+    return mapping[category] || 'MAINT'
+  }
+
+  // Mapeamento de unidades
+  const mapUnit = (unit: string): string => {
+    const mapping: Record<string, string> = {
+      'g': 'g',
+      'ml': 'ml',
+      'un': 'unit',
+      'col': 'cup',
+      'xic': 'cup',
+    }
+    return mapping[unit] || unit
+  }
+
+  const handleSave = async () => {
+    console.log('handleSave called')
+    try {
+      setSaving(true)
+
+      // Validações
+      if (!dietName.trim()) {
+        console.log('Validation failed: dietName')
+        toast({
+          title: "Erro",
+          description: "Nome da dieta é obrigatório",
+          variant: "destructive",
+        })
+        setSaving(false)
+        return
+      }
+
+      if (!category) {
+        console.log('Validation failed: category')
+        toast({
+          title: "Erro",
+          description: "Selecione uma categoria",
+          variant: "destructive",
+        })
+        setSaving(false)
+        return
+      }
+
+      if (!studentId) {
+        console.log('Validation failed: studentId')
+        toast({
+          title: "Erro",
+          description: "Selecione um aluno",
+          variant: "destructive",
+        })
+        setSaving(false)
+        return
+      }
+
+      console.log('Validations passed')
+
+      // Preparar dados para enviar
+      const today = new Date()
+      const startDate = today.toISOString().split('T')[0]
+      const endDate = new Date(today.setMonth(today.getMonth() + 3)).toISOString().split('T')[0]
+
+      const dietData = {
+        student_id: parseInt(studentId),
+        name: dietName,
+        goal: mapCategoryToGoal(category),
+        description: description || undefined,
+        target_calories: targetCalories ? parseInt(targetCalories) : undefined,
+        start_date: startDate,
+        end_date: endDate,
+        meals: meals
+          .filter(meal => meal.name.trim() && meal.time)
+          .map(meal => ({
+            name: meal.name,
+            time: meal.time + ':00', // Adiciona segundos
+            description: meal.name,
+            foods: meal.foods
+              .filter(food => food.name.trim() && food.quantity)
+              .map(food => ({
+                name: food.name,
+                quantity: parseFloat(food.quantity) || 0,
+                unit: mapUnit(food.unit),
+                calories: parseInt(food.calories) || 0,
+                protein: parseFloat(food.protein) || 0,
+                carbs: parseFloat(food.carbs) || 0,
+                fat: parseFloat(food.fat) || 0,
+              }))
+          }))
+      }
+
+      console.log('Diet data prepared:', dietData)
+
+      // Enviar para API
+      console.log('Calling API...')
+      const result = await createDietPlan(dietData)
+      console.log('API response:', result)
+
+      toast({
+        title: "Sucesso!",
+        description: "Dieta criada com sucesso",
+      })
+
+      // Redirecionar para lista de dietas
+      console.log('Redirecting to:', `/trainer/${userId}/diets`)
+      router.push(`/trainer/${userId}/diets`)
+    } catch (error: any) {
+      console.error('Error saving diet:', error)
+      console.error('Error response:', error.response)
+      console.error('Error data:', error.response?.data)
+      toast({
+        title: "Erro ao salvar dieta",
+        description: error.response?.data?.detail || error.response?.data?.message || error.message || "Tente novamente",
+        variant: "destructive",
+      })
+    } finally {
+      console.log('Finally block - setting saving to false')
+      setSaving(false)
+    }
+  }
+
+  const pathname = usePathname()
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const user = authApi.getUserFromStorage()
+    if (user) {
+      setUserId(user.id.toString())
+    }
+  }, [])
+
+  // Fetch teacher's students
+  useEffect(() => {
+    const fetchStudents = async () => {
+      if (!userId) return
       
-        useEffect(() => {
-          const user = authApi.getUserFromStorage()
-          if (user) {
-            setUserId(user.id.toString())
-          }
-        }, [])
-      
-        if (!userId) {
-          return null
-        }
+      try {
+        setLoadingStudents(true)
+        const teacher = await getTeacherByUserId(userId)
+  const studentsData = await getTeacherStudents()
+        console.log('Students fetched:', studentsData)
+        setStudents(studentsData)
+      } catch (error) {
+        console.error('Error fetching students:', error)
+        toast({
+          title: "Erro ao carregar alunos",
+          description: "Não foi possível carregar a lista de alunos",
+          variant: "destructive",
+        })
+      } finally {
+        setLoadingStudents(false)
+      }
+    }
+
+    fetchStudents()
+  }, [userId, toast])
+
+  if (!userId) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -134,11 +304,11 @@ export default function NewDietPage() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
-                <Link href="/trainer/diets">Cancelar</Link>
+                <Link href={`/trainer/${userId}/diets`}>Cancelar</Link>
               </Button>
-              <Button>
+              <Button onClick={handleSave} disabled={saving}>
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Dieta
+                {saving ? 'Salvando...' : 'Salvar Dieta'}
               </Button>
             </div>
           </div>
@@ -151,7 +321,29 @@ export default function NewDietPage() {
           <h2 className="text-lg font-semibold text-foreground mb-4">Informações da Dieta</h2>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome da Dieta</Label>
+              <Label htmlFor="student">Aluno *</Label>
+              <Select value={studentId} onValueChange={setStudentId} disabled={loadingStudents}>
+                <SelectTrigger id="student">
+                  <SelectValue placeholder={loadingStudents ? "Carregando alunos..." : "Selecione um aluno"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.length === 0 && !loadingStudents ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Nenhum aluno encontrado
+                    </div>
+                  ) : (
+                    students.map((student) => (
+                      <SelectItem key={student.student_user_id} value={student.student_user_id.toString()}>
+                        {student.student_name}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome da Dieta *</Label>
               <Input
                 id="name"
                 placeholder="Ex: Dieta Hipertrofia 3000 kcal"

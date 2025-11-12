@@ -99,3 +99,96 @@ class Appointment(models.Model):
     
     def __str__(self):
         return f"{self.teacher.user.username} - {self.student.user.username} - {self.date} {self.start_time}"
+    
+class TeacherStudents(models.Model):
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='students')
+    student = models.ForeignKey('student.Student', on_delete=models.CASCADE, related_name='teachers')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ('teacher', 'student')
+        verbose_name = 'Aluno do Professor'
+        verbose_name_plural = 'Alunos do Professor'
+    
+    def __str__(self):
+        return f"{self.student.user.username} assigned to {self.teacher.user.username}"
+    
+    def is_fully_evaluated(self):
+        try:
+            return self.evaluation.is_complete()
+        except StudentEvaluation.DoesNotExist:
+            return False
+        
+    def get_evaluation_status(self):
+        try:
+            evaluation = self.evaluation
+            return {
+                'has_initial_photos': evaluation.has_initial_photos,
+                'has_diet_plan': evaluation.has_diet_plan,
+                'has_training_plan': evaluation.has_training_plan,
+                'has_progress_log': evaluation.has_progress_log,
+                'has_body_measurements': evaluation.has_body_measurements,
+                'completion_percentage': evaluation.completion_percentage(),
+                'is_complete': evaluation.is_complete(),
+            }
+        except StudentEvaluation.DoesNotExist:
+            return {
+                'has_initial_photos': False,
+                'has_diet_plan': False,
+                'has_training_plan': False,
+                'has_progress_log': False,
+                'has_body_measurements': False,
+                'completion_percentage': 0,
+                'is_complete': False,
+            }
+        
+class StudentEvaluation(models.Model):
+    teacher_student = models.OneToOneField(
+        TeacherStudents, 
+        on_delete=models.CASCADE, 
+        related_name='evaluation'
+    )
+    
+    has_initial_photos = models.BooleanField(default=False)
+    initial_photos_date = models.DateTimeField(null=True, blank=True)
+    
+    has_diet_plan = models.BooleanField(default=False)
+    diet_plan_date = models.DateTimeField(null=True, blank=True)
+    
+    has_training_plan = models.BooleanField(default=False)
+    training_plan_date = models.DateTimeField(null=True, blank=True)
+    
+    has_progress_log = models.BooleanField(default=False)
+    progress_log_date = models.DateTimeField(null=True, blank=True)
+    
+    has_body_measurements = models.BooleanField(default=False)
+    body_measurements_date = models.DateTimeField(null=True, blank=True)
+    
+    evaluation_completed_at = models.DateTimeField(null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def is_complete(self):
+        return all([
+            self.has_initial_photos,
+            self.has_diet_plan,
+            self.has_training_plan,
+            self.has_progress_log,
+            self.has_body_measurements
+        ])
+    
+    def completion_percentage(self):
+        total_items = 5
+        completed_items = sum([
+            self.has_initial_photos,
+            self.has_diet_plan,
+            self.has_training_plan,
+            self.has_progress_log,
+            self.has_body_measurements
+        ])
+        return (completed_items / total_items) * 100
+    
+    def __str__(self):
+        return f"Avaliação de {self.teacher_student.student.user.username} - {self.completion_percentage():.0f}%"

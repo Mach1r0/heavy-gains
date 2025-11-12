@@ -1,17 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, CheckCircle2, Circle, Clock } from "lucide-react"
 import Link from "next/link"
+import { getTodayWorkoutSession } from "@/lib/api"
 
 interface ExerciseSet {
   completed: boolean
   weight: string
   reps: string
+  set_number?: number
 }
 
 interface Exercise {
@@ -24,60 +28,109 @@ interface Exercise {
   sets: ExerciseSet[]
 }
 
-const mockWorkout = {
-  id: 1,
-  name: "Treino A - Peito e Tríceps",
-  exercises: [
-    {
-      id: 1,
-      name: "Supino Reto com Barra",
-      targetSets: 4,
-      targetReps: "8-12",
-      rest: 90,
-      notes: "Manter cotovelos a 45°, descer até o peito",
-      sets: [
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-      ],
-    },
-    {
-      id: 2,
-      name: "Supino Inclinado com Halteres",
-      targetSets: 3,
-      targetReps: "10-12",
-      rest: 60,
-      notes: "Inclinação de 30-45°",
-      sets: [
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-      ],
-    },
-    {
-      id: 3,
-      name: "Crucifixo na Polia",
-      targetSets: 3,
-      targetReps: "12-15",
-      rest: 45,
-      notes: "Foco na contração do peitoral",
-      sets: [
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-        { completed: false, weight: "", reps: "" },
-      ],
-    },
-  ],
+interface WorkoutSession {
+  id: number
+  workout: {
+    id: number
+    name: string
+    training_plan: number
+  }
+  exercise_logs: Array<{
+    id: number
+    exercise: {
+      id: number
+      name: string
+      description?: string
+      muscle_group: string
+    }
+    workout_exercise?: {
+      sets: number
+      reps: number
+      rest_time?: string
+      notes?: string
+    }
+    order: number
+    set_logs: Array<{
+      id: number
+      set_number: number
+      repetitions: number
+      weight: number
+      completed?: boolean
+    }>
+  }>
+  status: string
+  date: string
 }
 
 export default function WorkoutPage() {
-  const [exercises, setExercises] = useState<Exercise[]>(mockWorkout.exercises)
+  const params = useParams()
+  const studentId = params.id as string
+  const { user, isLoading: authLoading } = useAuth()
+  
+  const [workoutSession, setWorkoutSession] = useState<WorkoutSession | null>(null)
+  const [exercises, setExercises] = useState<Exercise[]>([])
   const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0)
   const [restTimer, setRestTimer] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const currentExercise = exercises[currentExerciseIndex]
-  const completedSets = currentExercise.sets.filter((s) => s.completed).length
+  useEffect(() => {
+    const fetchWorkoutSession = async () => {
+      if (!user?.id) return
+      
+      try {
+        setLoading(true)
+        const session = await getTodayWorkoutSession(user.id)
+        
+        if (session && session.exercise_logs) {
+          setWorkoutSession(session)
+          
+          // Transform exercise logs into workout exercises with empty sets
+          const transformedExercises: Exercise[] = session.exercise_logs.map((log: any) => {
+            const targetSets = log.workout_exercise?.sets || 3
+            const targetReps = log.workout_exercise?.reps || 12
+            const restTime = log.workout_exercise?.rest_time || "00:01:30"
+            
+            // Parse rest time (format: HH:MM:SS or MM:SS)
+            const restSeconds = restTime.split(':').reduce((acc: number, time: string) => (60 * acc) + parseInt(time), 0)
+            
+            // Create empty sets or use existing set logs
+            const sets: ExerciseSet[] = Array.from({ length: targetSets }, (_, index) => {
+              const existingSet = log.set_logs?.find((s: any) => s.set_number === index + 1)
+              return {
+                completed: existingSet?.completed || false,
+                weight: existingSet?.weight?.toString() || "",
+                reps: existingSet?.repetitions?.toString() || "",
+                set_number: index + 1
+              }
+            })
+            
+            return {
+              id: log.id,
+              name: log.exercise.name,
+              targetSets,
+              targetReps: targetReps.toString(),
+              rest: restSeconds,
+              notes: log.workout_exercise?.notes || "",
+              sets
+            }
+          })
+          
+          setExercises(transformedExercises)
+        }
+      } catch (error) {
+        console.error('Error fetching workout session:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!authLoading && user?.id) {
+      fetchWorkoutSession()
+    }
+  }, [user?.id, authLoading])
+
+  const currentExercise = exercises.length > 0 ? exercises[currentExerciseIndex] : null
+  const completedSets = currentExercise ? currentExercise.sets.filter((s) => s.completed).length : 0
 
   const toggleSetComplete = (exerciseIndex: number, setIndex: number) => {
     const newExercises = [...exercises]
@@ -109,6 +162,39 @@ export default function WorkoutPage() {
     }
   }
 
+  if (authLoading || loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Carregando treino...</div>
+      </div>
+    )
+  }
+
+  if (!workoutSession || exercises.length === 0 || !currentExercise) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href={`/student/${studentId}/dashboard`}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </Button>
+              <h1 className="text-2xl font-bold text-foreground">Treino</h1>
+            </div>
+          </div>
+        </header>
+        <div className="flex h-[calc(100vh-200px)] items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground">Nenhum treino programado para hoje</p>
+            <p className="text-sm text-muted-foreground mt-2">Descanse ou entre em contato com seu treinador</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -117,12 +203,12 @@ export default function WorkoutPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href="/student/dashboard">
+                <Link href={`/student/${studentId}/dashboard`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{mockWorkout.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{workoutSession.workout.name}</h1>
                 <p className="text-sm text-muted-foreground">
                   Exercício {currentExerciseIndex + 1} de {exercises.length}
                 </p>

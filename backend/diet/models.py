@@ -36,6 +36,8 @@ class DietPlan(models.Model):
     teacher = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_diet_plans')
     name = models.CharField(max_length=150)
     goal = models.CharField(max_length=5, choices=GOAL)
+    description = models.TextField(blank=True, null=True)
+    target_calories = models.IntegerField(blank=True, null=True, help_text="Target daily calories")
     start_date = models.DateField()
     end_date = models.DateField()
     is_active = models.BooleanField(default=True)

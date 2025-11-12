@@ -8,21 +8,16 @@ class StudentSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, style={'input_type': 'password'})
     first_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
     last_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    
     user_data = serializers.SerializerMethodField(read_only=True)
     
     class Meta:
         model = Student
         fields = [
             'id', 'username', 'email', 'password', 'first_name', 'last_name',
-            'age', 'weight', 'height', 'created_at', 'updated_at', 'user_data'
+            'age', 'created_at', 'updated_at', 'user_data'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
-        extra_kwargs = {
-            'age': {'required': False, 'allow_null': True},
-            'weight': {'required': False, 'allow_null': True},
-            'height': {'required': False, 'allow_null': True},
-        }
+
     
     def validate_username(self, value):
         if User.objects.filter(username=value).exists():

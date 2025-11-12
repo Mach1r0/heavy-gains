@@ -9,71 +9,66 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
-
-// Mock data
-const mockWorkouts = [
-  {
-    id: 1,
-    name: "Treino A - Peito e Tríceps",
-    exercises: 8,
-    students: 12,
-    lastUsed: "2024-01-15",
-    category: "Hipertrofia",
-  },
-  {
-    id: 2,
-    name: "Treino B - Costas e Bíceps",
-    exercises: 9,
-    students: 12,
-    lastUsed: "2024-01-14",
-    category: "Hipertrofia",
-  },
-  {
-    id: 3,
-    name: "Treino C - Pernas",
-    exercises: 7,
-    students: 10,
-    lastUsed: "2024-01-13",
-    category: "Hipertrofia",
-  },
-  {
-    id: 4,
-    name: "Treino Full Body - Iniciante",
-    exercises: 6,
-    students: 5,
-    lastUsed: "2024-01-12",
-    category: "Iniciante",
-  },
-  {
-    id: 5,
-    name: "HIIT Cardio",
-    exercises: 5,
-    students: 8,
-    lastUsed: "2024-01-11",
-    category: "Emagrecimento",
-  },
-]
+import { apiClient } from "@/lib/api/client"
 
 export default function WorkoutsPage() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [workouts, setWorkouts] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState<string | null>(null)
 
-  const filteredWorkouts = mockWorkouts.filter((workout) =>
-    workout.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  useEffect(() => {
+    async function fetchWorkouts() {
+      try {
+        const response = await apiClient.get('/training/')
+        setWorkouts(response.data)
+      } catch (error) {
+        console.error('Erro ao buscar treinos:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchWorkouts()
+  }, [])
+
+  useEffect(() => {
+    const user = authApi.getUserFromStorage()
+    if (user) {
+      setUserId(user.id.toString())
+    }
+  }, [])
+
+  // Group trainings by name and aggregate students
+  const groupedWorkouts = workouts.reduce((acc: any, workout: any) => {
+    const name = workout.name || 'Sem nome'
+    
+    if (!acc[name]) {
+      acc[name] = {
+        ...workout,
+        studentCount: 1,
+        studentIds: [workout.student],
+        ids: [workout.id]
+      }
+    } else {
+      acc[name].studentCount += 1
+      acc[name].studentIds.push(workout.student)
+      acc[name].ids.push(workout.id)
+    }
+    
+    return acc
+  }, {})
+
+  const groupedWorkoutsArray = Object.values(groupedWorkouts).filter((workout: any) =>
+    workout.name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-    const pathname = usePathname()
-    const [userId, setUserId] = useState<string | null>(null)
-  
-    useEffect(() => {
-      const user = authApi.getUserFromStorage()
-      if (user) {
-        setUserId(user.id.toString())
-      }
-    }, [])
-  
-    if (!userId) {
-      return null
-    }
+  if (!userId) {
+    return null
+  }
+  if (loading) {
+    return <div>Carregando treinos...</div>
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -115,8 +110,8 @@ export default function WorkoutsPage() {
 
         {/* Workouts Grid */}
         <div className="grid gap-4">
-          {filteredWorkouts.map((workout) => (
-            <Card key={workout.id} className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
+          {groupedWorkoutsArray.map((workout: any) => (
+            <Card key={workout.name} className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 flex-1">
                   <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
@@ -126,15 +121,15 @@ export default function WorkoutsPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-foreground">{workout.name}</h3>
-                      <Badge variant="secondary">{workout.category}</Badge>
+                      <Badge variant="secondary">{workout.category || 'Treino'}</Badge>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{workout.exercises} exercícios</span>
+                      <span>{workout.exercises || 0} exercícios</span>
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        {workout.students} alunos
+                        {workout.studentCount} {workout.studentCount === 1 ? 'aluno' : 'alunos'}
                       </span>
-                      <span>Usado em {new Date(workout.lastUsed).toLocaleDateString("pt-BR")}</span>
+                      <span>Usado em {workout.lastUsed ? new Date(workout.lastUsed).toLocaleDateString("pt-BR") : "-"}</span>
                     </div>
                   </div>
                 </div>

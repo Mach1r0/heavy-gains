@@ -105,7 +105,6 @@ export function DietManagement({ studentId }: { studentId: string }) {
         </Dialog>
       </div>
 
-      {/* Diets List */}
       {diets.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">

@@ -12,6 +12,11 @@ class DietPlanViewSet(viewsets.ModelViewSet):
     queryset = DietPlan.objects.all()
     serializer_class = DietPlanSerializer
     permission_classes = [permissions.IsAuthenticated]
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return DietPlanCreateSerializer
+        return DietPlanSerializer
 
 class MealFoodItemViewSet(viewsets.ModelViewSet):
     queryset = MealFoodItem.objects.all()

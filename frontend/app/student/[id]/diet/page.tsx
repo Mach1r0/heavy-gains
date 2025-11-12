@@ -1,130 +1,173 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useParams } from "next/navigation"
+import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, Clock, CheckCircle2, Circle } from "lucide-react"
 import Link from "next/link"
+import { getActiveDietPlan } from "@/lib/api"
 
-interface Food {
-  name: string
-  quantity: string
+interface FoodItem {
+  id: number
+  food_item: {
+    id: number
+    name: string
+    calories: number
+    protein: number
+    carbs: number
+    fats: number
+  }
+  quantity: number
   unit: string
-  calories: number
-  protein: number
-  carbs: number
-  fat: number
 }
 
 interface Meal {
   id: number
   name: string
   time: string
-  completed: boolean
-  foods: Food[]
+  description?: string
+  completed?: boolean
+  food_items: FoodItem[]
 }
 
-const mockDiet = {
-  name: "Dieta Hipertrofia 3000 kcal",
-  targetCalories: 3000,
-  meals: [
-    {
-      id: 1,
-      name: "Café da Manhã",
-      time: "07:00",
-      completed: true,
-      foods: [
-        { name: "Aveia", quantity: "80", unit: "g", calories: 304, protein: 10.7, carbs: 54.8, fat: 5.4 },
-        { name: "Banana", quantity: "1", unit: "un", calories: 105, protein: 1.3, carbs: 27, fat: 0.4 },
-        { name: "Whey Protein", quantity: "30", unit: "g", calories: 120, protein: 24, carbs: 3, fat: 1.5 },
-        { name: "Pasta de Amendoim", quantity: "20", unit: "g", calories: 120, protein: 5, carbs: 4, fat: 10 },
-      ],
-    },
-    {
-      id: 2,
-      name: "Lanche da Manhã",
-      time: "10:00",
-      completed: true,
-      foods: [
-        { name: "Pão Integral", quantity: "2", unit: "fatias", calories: 140, protein: 6, carbs: 26, fat: 2 },
-        { name: "Peito de Peru", quantity: "50", unit: "g", calories: 55, protein: 11, carbs: 1, fat: 1 },
-        { name: "Queijo Cottage", quantity: "50", unit: "g", calories: 49, protein: 6, carbs: 2, fat: 2 },
-      ],
-    },
-    {
-      id: 3,
-      name: "Almoço",
-      time: "13:00",
-      completed: false,
-      foods: [
-        { name: "Arroz Integral", quantity: "150", unit: "g", calories: 195, protein: 4.5, carbs: 40.5, fat: 1.5 },
-        { name: "Frango Grelhado", quantity: "200", unit: "g", calories: 330, protein: 62, carbs: 0, fat: 7.2 },
-        { name: "Feijão", quantity: "100", unit: "g", calories: 77, protein: 4.5, carbs: 14, fat: 0.5 },
-        { name: "Brócolis", quantity: "100", unit: "g", calories: 34, protein: 2.8, carbs: 7, fat: 0.4 },
-      ],
-    },
-    {
-      id: 4,
-      name: "Lanche da Tarde",
-      time: "16:00",
-      completed: false,
-      foods: [
-        { name: "Batata Doce", quantity: "200", unit: "g", calories: 172, protein: 3.2, carbs: 40, fat: 0.2 },
-        { name: "Ovo Cozido", quantity: "2", unit: "un", calories: 140, protein: 12, carbs: 1, fat: 10 },
-      ],
-    },
-    {
-      id: 5,
-      name: "Jantar",
-      time: "19:00",
-      completed: false,
-      foods: [
-        { name: "Arroz Integral", quantity: "100", unit: "g", calories: 130, protein: 3, carbs: 27, fat: 1 },
-        { name: "Salmão Grelhado", quantity: "150", unit: "g", calories: 312, protein: 31.5, carbs: 0, fat: 20.3 },
-        { name: "Aspargos", quantity: "100", unit: "g", calories: 20, protein: 2.2, carbs: 3.9, fat: 0.1 },
-      ],
-    },
-    {
-      id: 6,
-      name: "Ceia",
-      time: "22:00",
-      completed: false,
-      foods: [
-        { name: "Iogurte Grego", quantity: "200", unit: "g", calories: 130, protein: 20, carbs: 9, fat: 0.7 },
-        { name: "Castanhas", quantity: "30", unit: "g", calories: 196, protein: 6, carbs: 4, fat: 19 },
-      ],
-    },
-  ],
+interface DietPlan {
+  id: number
+  name: string
+  goal: string
+  meals: Meal[]
 }
 
 export default function DietPage() {
-  const [meals, setMeals] = useState<Meal[]>(mockDiet.meals)
+  const params = useParams()
+  const studentId = params.id as string
+  const { user, isLoading: authLoading } = useAuth()
+  
+  const [dietPlan, setDietPlan] = useState<DietPlan | null>(null)
+  const [meals, setMeals] = useState<Meal[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDietPlan = async () => {
+      if (!user?.id) return
+      
+      try {
+        setLoading(true)
+        const plan = await getActiveDietPlan(studentId)
+        
+        if (plan) {
+          setDietPlan(plan)
+          // Add completed status to meals (you can track this in localStorage or backend)
+          const mealsWithStatus = plan.meals.map((meal: Meal) => ({
+            ...meal,
+            completed: false
+          }))
+          setMeals(mealsWithStatus)
+        }
+      } catch (error) {
+        console.error('Error fetching diet plan:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!authLoading && user?.id) {
+      fetchDietPlan()
+    }
+  }, [studentId, user?.id, authLoading])
 
   const toggleMealComplete = (mealId: number) => {
     setMeals(meals.map((meal) => (meal.id === mealId ? { ...meal, completed: !meal.completed } : meal)))
   }
 
-  const totalCalories = meals.reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.calories, 0), 0)
-  const consumedCalories = meals
-    .filter((m) => m.completed)
-    .reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.calories, 0), 0)
+  // Calculate macros from real data
+  const calculateMealMacros = (meal: Meal) => {
+    return meal.food_items.reduce((acc, item) => {
+      const multiplier = item.quantity / 100 // Since values are per 100g
+      return {
+        calories: acc.calories + (item.food_item.calories * multiplier),
+        protein: acc.protein + (item.food_item.protein * multiplier),
+        carbs: acc.carbs + (item.food_item.carbs * multiplier),
+        fats: acc.fats + (item.food_item.fats * multiplier),
+      }
+    }, { calories: 0, protein: 0, carbs: 0, fats: 0 })
+  }
 
-  const totalProtein = meals.reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.protein, 0), 0)
-  const consumedProtein = meals
-    .filter((m) => m.completed)
-    .reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.protein, 0), 0)
+  const totalCalories = meals.reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.calories
+  }, 0)
 
-  const totalCarbs = meals.reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.carbs, 0), 0)
-  const consumedCarbs = meals
-    .filter((m) => m.completed)
-    .reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.carbs, 0), 0)
+  const consumedCalories = meals.filter(m => m.completed).reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.calories
+  }, 0)
 
-  const totalFat = meals.reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.fat, 0), 0)
-  const consumedFat = meals
-    .filter((m) => m.completed)
-    .reduce((sum, meal) => sum + meal.foods.reduce((s, food) => s + food.fat, 0), 0)
+  const totalProtein = meals.reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.protein
+  }, 0)
+
+  const consumedProtein = meals.filter(m => m.completed).reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.protein
+  }, 0)
+
+  const totalCarbs = meals.reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.carbs
+  }, 0)
+
+  const consumedCarbs = meals.filter(m => m.completed).reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.carbs
+  }, 0)
+
+  const totalFat = meals.reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.fats
+  }, 0)
+
+  const consumedFat = meals.filter(m => m.completed).reduce((sum, meal) => {
+    const macros = calculateMealMacros(meal)
+    return sum + macros.fats
+  }, 0)
+
+  if (authLoading || loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-lg">Carregando dieta...</div>
+      </div>
+    )
+  }
+
+  if (!dietPlan || meals.length === 0) {
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b border-border bg-card">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" asChild>
+                <Link href={`/student/${studentId}/dashboard`}>
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </Button>
+              <h1 className="text-2xl font-bold text-foreground">Dieta</h1>
+            </div>
+          </div>
+        </header>
+        <div className="flex h-[calc(100vh-200px)] items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg text-muted-foreground">Nenhum plano de dieta ativo encontrado</p>
+            <p className="text-sm text-muted-foreground mt-2">Entre em contato com seu treinador</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,12 +177,12 @@ export default function DietPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href="/student/dashboard">
+                <Link href={`/student/${studentId}/dashboard`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{mockDiet.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{dietPlan.name}</h1>
                 <p className="text-sm text-muted-foreground">Seu plano alimentar de hoje</p>
               </div>
             </div>
@@ -185,10 +228,7 @@ export default function DietPage() {
         {/* Meals */}
         <div className="space-y-4">
           {meals.map((meal) => {
-            const mealCalories = meal.foods.reduce((sum, food) => sum + food.calories, 0)
-            const mealProtein = meal.foods.reduce((sum, food) => sum + food.protein, 0)
-            const mealCarbs = meal.foods.reduce((sum, food) => sum + food.carbs, 0)
-            const mealFat = meal.foods.reduce((sum, food) => sum + food.fat, 0)
+            const macros = calculateMealMacros(meal)
 
             return (
               <Card
@@ -216,28 +256,34 @@ export default function DietPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold text-foreground">{Math.round(mealCalories)} kcal</p>
+                    <p className="text-lg font-bold text-foreground">{Math.round(macros.calories)} kcal</p>
                     <p className="text-xs text-muted-foreground">
-                      P: {Math.round(mealProtein)}g | C: {Math.round(mealCarbs)}g | G: {Math.round(mealFat)}g
+                      P: {Math.round(macros.protein)}g | C: {Math.round(macros.carbs)}g | G: {Math.round(macros.fats)}g
                     </p>
                   </div>
                 </div>
 
                 <div className="space-y-2 pl-9">
-                  {meal.foods.map((food, index) => (
-                    <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded text-sm">
-                      <p className="font-medium text-foreground">
-                        {food.name} - {food.quantity}
-                        {food.unit}
-                      </p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{Math.round(food.calories)} kcal</span>
-                        <span>P: {food.protein}g</span>
-                        <span>C: {food.carbs}g</span>
-                        <span>G: {food.fat}g</span>
+                  {meal.food_items.map((item, index) => {
+                    const itemCalories = (item.food_item.calories * item.quantity) / 100
+                    const itemProtein = (item.food_item.protein * item.quantity) / 100
+                    const itemCarbs = (item.food_item.carbs * item.quantity) / 100
+                    const itemFats = (item.food_item.fats * item.quantity) / 100
+
+                    return (
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded text-sm">
+                        <p className="font-medium text-foreground">
+                          {item.food_item.name} - {item.quantity}{item.unit}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{Math.round(itemCalories)} kcal</span>
+                          <span>P: {itemProtein.toFixed(1)}g</span>
+                          <span>C: {itemCarbs.toFixed(1)}g</span>
+                          <span>G: {itemFats.toFixed(1)}g</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               </Card>
             )

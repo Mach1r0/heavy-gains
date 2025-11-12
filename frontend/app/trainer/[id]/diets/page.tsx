@@ -37,55 +37,42 @@ export default function DietsPage() {
   const [loading, setLoading] = useState(true)
   const pathname = usePathname()
   const [userId, setUserId] = useState<string | null>(null)
-  
 
-  useEffect(() => {
-    // TODO: Fetch all diets from API
-    // Mock data for now
-    const mockDiets: DietPlan[] = [
-      {
-        id: 1,
-        name: "Dieta de Ganho de Massa",
-        goal: "BUK",
-        start_date: "2025-01-01",
-        end_date: "2025-03-31",
-        is_active: true,
-        meals_count: 6,
-        student_name: "João Silva",
-      },
-      {
-        id: 2,
-        name: "Dieta de Definição",
-        goal: "CUT",
-        start_date: "2024-10-01",
-        end_date: "2024-12-31",
-        is_active: false,
-        meals_count: 5,
-        student_name: "Maria Santos",
-      },
-      {
-        id: 3,
-        name: "Dieta de Manutenção",
-        goal: "MAINT",
-        start_date: "2025-01-15",
-        end_date: "2025-04-15",
-        is_active: true,
-        meals_count: 5,
-        student_name: "Pedro Costa",
-      },
-    ]
-
-    setDiets(mockDiets)
-    setLoading(false)
-  }, [])
-
-  // Separate hook to get current user (must be top-level)
   useEffect(() => {
     const user = authApi.getUserFromStorage()
     if (user) {
       setUserId(user.id.toString())
+      fetchDiets()
     }
   }, [])
+
+  const fetchDiets = async () => {
+    try {
+      setLoading(true)
+      const { getDietPlans } = await import("@/lib/api")
+      const dietsData = await getDietPlans()
+      
+      // Transform data to include student names and meals count
+      const transformedDiets = dietsData.map((diet: any) => ({
+        id: diet.id,
+        name: diet.name,
+        goal: diet.goal,
+        start_date: diet.start_date,
+        end_date: diet.end_date,
+        is_active: diet.is_active,
+        meals_count: diet.meals?.length || 0,
+        student_name: diet.student?.user?.first_name 
+          ? `${diet.student.user.first_name} ${diet.student.user.last_name}`.trim()
+          : 'Aluno',
+      }))
+      
+      setDiets(transformedDiets)
+    } catch (error) {
+      console.error('Error fetching diets:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -118,7 +105,7 @@ export default function DietsPage() {
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">Nenhuma dieta criada ainda</p>
               <Button asChild>
-                <Link href="/diets/new">Criar Primeira Dieta</Link>
+                <Link href={`/trainer/${userId}/diets/new`}>Criar Primeira Dieta</Link>
               </Button>
             </CardContent>
           </Card>

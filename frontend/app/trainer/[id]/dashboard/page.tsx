@@ -22,66 +22,91 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
+import { getTeacherByUserId, getTeacherStudents, getTeacherStats } from "@/lib/api"
 
-const mockStudents = [
-  {
-    id: 1,
-    name: "João Silva",
-    email: "joao@email.com",
-    avatar: "/male-athlete.png",
-    status: "active",
-    workoutsCompleted: 12,
-    lastWorkout: "2024-01-15",
-    progress: 85,
-    pendingTasks: ["Avaliar fotos de progresso"],
-  },
-  {
-    id: 2,
-    name: "Maria Santos",
-    email: "maria@email.com",
-    avatar: "/female-athlete.png",
-    status: "active",
-    workoutsCompleted: 8,
-    lastWorkout: "2024-01-14",
-    progress: 72,
-    pendingTasks: ["Prescrever dieta", "Avaliar medidas"],
-  },
-  {
-    id: 3,
-    name: "Pedro Costa",
-    email: "pedro@email.com",
-    avatar: "/male-fitness.jpg",
-    status: "inactive",
-    workoutsCompleted: 3,
-    lastWorkout: "2024-01-10",
-    progress: 45,
-    pendingTasks: [],
-  },
-  {
-    id: 4,
-    name: "Ana Oliveira",
-    email: "ana@email.com",
-    avatar: "/female-fitness.jpg",
-    status: "active",
-    workoutsCompleted: 15,
-    lastWorkout: "2024-01-15",
-    progress: 92,
-    pendingTasks: ["Atualizar treino"],
-  },
-]
+interface StudentDisplay {
+  id: number
+  name: string
+  email: string
+  avatar?: string
+  status: string
+  workoutsCompleted: number
+  lastWorkout: string
+  progress: number
+  pendingTasks: string[]
+}
 
-const mockStats = {
-  totalStudents: 24,
-  activeStudents: 18,
-  workoutsThisWeek: 156,
-  avgProgress: 78,
+interface Stats {
+  totalStudents: number
+  activeStudents: number
+  workoutsThisWeek: number
+  avgProgress: number
 }
 
 export default function TrainerDashboard() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showPendingOnly, setShowPendingOnly] = useState(false)
+  const [students, setStudents] = useState<StudentDisplay[]>([])
+  const [stats, setStats] = useState<Stats>({
+    totalStudents: 0,
+    activeStudents: 0,
+    workoutsThisWeek: 0,
+    avgProgress: 0,
+  })
+  const [loading, setLoading] = useState(true)
+  const pathname = usePathname()
+  const [userId, setUserId] = useState<string | null>(null)
+  const [teacherId, setTeacherId] = useState<number | null>(null)
 
-  const filteredStudents = mockStudents.filter((student) => {
+  useEffect(() => {
+    const user = authApi.getUserFromStorage()
+    if (user) {
+      setUserId(user.id.toString())
+      fetchTeacherData(user.id)
+    }
+  }, [])
+
+  const fetchTeacherData = async (userId: number) => {
+    try {
+      setLoading(true)
+      // Get teacher profile
+      const teacher = await getTeacherByUserId(userId)
+      setTeacherId(teacher.id)
+      
+      // Get teacher's students
+  const studentsData = await getTeacherStudents()
+      
+      // Transform students data
+      const transformedStudents: StudentDisplay[] = studentsData.map((student: any) => ({
+        id: student.id,
+        name: `${student.user.first_name} ${student.user.last_name}`.trim() || student.user.username,
+        email: student.user.email,
+        avatar: student.user.profile_picture,
+        status: 'active', // TODO: Implement status logic
+        workoutsCompleted: 0, // TODO: Get from workout sessions
+        lastWorkout: '', // TODO: Get from workout sessions
+        progress: 0, // TODO: Calculate from progress logs
+        pendingTasks: [], // TODO: Implement pending tasks
+      }))
+      
+      setStudents(transformedStudents)
+      
+      // Get stats
+      const statsData = await getTeacherStats(teacher.id)
+      setStats({
+        totalStudents: statsData.total_students,
+        activeStudents: statsData.active_students,
+        workoutsThisWeek: statsData.workouts_this_week,
+        avgProgress: statsData.avg_progress,
+      })
+    } catch (error) {
+      console.error('Error fetching teacher data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredStudents = students.filter((student) => {
     const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,17 +114,7 @@ export default function TrainerDashboard() {
     return matchesSearch && matchesPending
   })
 
-  const studentsWithPending = mockStudents.filter((s) => s.pendingTasks.length > 0).length
-
-      const pathname = usePathname()
-      const [userId, setUserId] = useState<string | null>(null)
-    
-      useEffect(() => {
-        const user = authApi.getUserFromStorage()
-        if (user) {
-          setUserId(user.id.toString())
-        }
-      }, [])
+  const studentsWithPending = students.filter((s) => s.pendingTasks.length > 0).length
     
       if (!userId) {
         return null
@@ -129,71 +144,77 @@ export default function TrainerDashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <Card className="p-4 bg-card border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total de Alunos</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{mockStats.totalStudents}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Users className="h-6 w-6 text-primary" />
-              </div>
-            </div>
-          </Card>
+        {loading ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="text-lg">Carregando...</div>
+          </div>
+        ) : (
+          <>
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <Card className="p-4 bg-card border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total de Alunos</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{stats.totalStudents}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-4 bg-card border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Alunos Ativos</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{mockStats.activeStudents}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Activity className="h-6 w-6 text-green-500" />
-              </div>
-            </div>
-          </Card>
+              <Card className="p-4 bg-card border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Alunos Ativos</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{stats.activeStudents}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-green-500/10 flex items-center justify-center">
+                    <Activity className="h-6 w-6 text-green-500" />
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-4 bg-card border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Treinos (Semana)</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{mockStats.workoutsThisWeek}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <Dumbbell className="h-6 w-6 text-blue-500" />
-              </div>
-            </div>
-          </Card>
+              <Card className="p-4 bg-card border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Treinos (Semana)</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{stats.workoutsThisWeek}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-blue-500/10 flex items-center justify-center">
+                    <Dumbbell className="h-6 w-6 text-blue-500" />
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-4 bg-card border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Progresso Médio</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{mockStats.avgProgress}%</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
-                <TrendingUp className="h-6 w-6 text-purple-500" />
-              </div>
-            </div>
-          </Card>
+              <Card className="p-4 bg-card border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Progresso Médio</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{stats.avgProgress}%</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-purple-500/10 flex items-center justify-center">
+                    <TrendingUp className="h-6 w-6 text-purple-500" />
+                  </div>
+                </div>
+              </Card>
 
-          <Card className="p-4 bg-card border-border">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Tarefas Pendentes</p>
-                <p className="text-3xl font-bold text-foreground mt-1">{studentsWithPending}</p>
-              </div>
-              <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <AlertCircle className="h-6 w-6 text-orange-500" />
-              </div>
+              <Card className="p-4 bg-card border-border">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tarefas Pendentes</p>
+                    <p className="text-3xl font-bold text-foreground mt-1">{studentsWithPending}</p>
+                  </div>
+                  <div className="h-12 w-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-orange-500" />
+                  </div>
+                </div>
+              </Card>
             </div>
-          </Card>
-        </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="students" className="space-y-4">
+            {/* Main Content */}
+            <Tabs defaultValue="students" className="space-y-4">
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="students">Alunos</TabsTrigger>
@@ -338,7 +359,7 @@ export default function TrainerDashboard() {
                   </p>
                 </div>
                 <Button asChild>
-                  <Link href="/trainer/diets/new">
+                  <Link href={`/trainer/${userId}/diets`}>
                     <Plus className="h-4 w-4 mr-2" />
                     Criar Nova Dieta
                   </Link>
@@ -347,6 +368,8 @@ export default function TrainerDashboard() {
             </Card>
           </TabsContent>
         </Tabs>
+          </>
+        )}
       </div>
     </div>
   )

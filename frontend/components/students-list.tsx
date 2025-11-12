@@ -12,20 +12,25 @@ import { authApi } from "@/lib/api/auth"
 
 interface Student {
   id: number
-  user: {
+  student: {
     id: number
-    username: string
-    email: string
-    first_name: string
-    last_name: string
-    profile_picture?: string
+    age?: number
+    user_data: {
+      id: number
+      username: string
+      email: string
+      first_name: string
+      last_name: string
+      profile_picture?: string
+    }
   }
-  age?: number
-  weight?: number
-  height?: number
-  phone_number?: string
-  has_measurements: boolean
-  has_photos: boolean
+  student_id: number
+  student_name: string
+  student_user_id: number
+  assigned_at: string
+  is_active: boolean
+  has_measurements?: boolean
+  has_photos?: boolean
 }
 
 export function StudentsList() {
@@ -33,42 +38,48 @@ export function StudentsList() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const mockStudents: Student[] = [
-      {
-        id: 1,
-        user: {
-          id: 1,
-          username: "joao_silva",
-          email: "joao@example.com",
-          first_name: "João",
-          last_name: "Silva",
-        },
-        age: 25,
-        weight: 75,
-        height: 1.75,
-        has_measurements: true,
-        has_photos: true,
-      },
-      {
-        id: 2,
-        user: {
-          id: 2,
-          username: "maria_santos",
-          email: "maria@example.com",
-          first_name: "Maria",
-          last_name: "Santos",
-        },
-        age: 28,
-        weight: 62,
-        height: 1.65,
-        has_measurements: false,
-        has_photos: false,
-      },
-    ]
-
-    setStudents(mockStudents)
-    setLoading(false)
+    fetchStudents()
   }, [])
+
+  const fetchStudents = async () => {
+    try {
+      setLoading(true)
+      const user = authApi.getUserFromStorage()
+      
+      if (!user) {
+        console.error('No user found')
+        return
+      }
+
+      // Import dynamically to avoid circular dependencies
+      const { getTeacherByUserId, getTeacherStudents } = await import('@/lib/api')
+      
+      // Get teacher profile
+      const teacher = await getTeacherByUserId(user.id)
+      
+      // Get teacher's students
+  const studentsData = await getTeacherStudents()
+  console.log('Fetched studentsData:', studentsData)
+      
+      // Add has_measurements and has_photos flags (would need backend support)
+      const studentsWithFlags = studentsData.map((student: any) => ({
+        ...student,
+        has_measurements: false, // TODO: Implement backend check
+        has_photos: false, // TODO: Implement backend check
+      }))
+      
+      setStudents(studentsWithFlags)
+    } catch (error: any) {
+      console.error('Error fetching students:', error);
+      if (error.response) {
+        console.error('API error response:', error.response);
+      } else if (error.request) {
+        console.error('API error request:', error.request);
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const evaluatedStudents = students.filter((s) => s.has_measurements || s.has_photos)
   const notEvaluatedStudents = students.filter((s) => !s.has_measurements && !s.has_photos)
@@ -127,10 +138,10 @@ export function StudentsList() {
 }
 
 function StudentCard({ student }: { student: Student }) {
-  const fullName = `${student.user.first_name} ${student.user.last_name}`.trim() || student.user.username
+  const fullName = `${student.student.user_data.first_name} ${student.student.user_data.last_name}`.trim() || student.student.user_data.username
   const initials = fullName
     .split(" ")
-    .map((n) => n[0])
+    .map((n: string) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2)
@@ -139,26 +150,25 @@ function StudentCard({ student }: { student: Student }) {
   const segments = pathname ? pathname.split("/").filter(Boolean) : []
   const trainerIndex = segments.indexOf("trainer")
   const trainerId = trainerIndex >= 0 ? segments[trainerIndex + 1] ?? "" : ""
-  const href = trainerId ? `/trainer/${trainerId}/students/${student.id}` : `/students/${student.id}`
+  const href = trainerId ? `/trainer/${trainerId}/students/${student.student_id}` : `/students/${student.student_id}`
 
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-3">
           <Avatar>
-            <AvatarImage src={student.user.profile_picture || "/placeholder.svg"} />
+            <AvatarImage src={student.student.user_data.profile_picture || "/placeholder.svg"} />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <CardTitle className="text-base truncate">{fullName}</CardTitle>
-            <p className="text-sm text-muted-foreground truncate">@{student.user.username}</p>
+            <p className="text-sm text-muted-foreground truncate">@{student.student.user_data.username}</p>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex gap-2 text-sm">
-          {student.age && <Badge variant="outline">{student.age} anos</Badge>}
-          {student.weight && <Badge variant="outline">{student.weight} kg</Badge>}
+          {student.student.age && <Badge variant="outline">{student.student.age} anos</Badge>}
         </div>
 
         <Button asChild className="w-full">

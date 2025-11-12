@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
@@ -11,65 +11,85 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Dumbbell, Apple, TrendingUp, Calendar, Clock, CheckCircle2, Circle, MessageSquare } from "lucide-react"
 import Link from "next/link"
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-
-// Mock data
-const mockStudent = {
-  name: "João Silva",
-  avatar: "/male-athlete.png",
-  trainer: "Carlos Mendes",
-  goal: "Hipertrofia",
-  startDate: "2023-10-15",
-}
-
-const mockStats = {
-  workoutsThisWeek: 3,
-  workoutsGoal: 5,
-  dietAdherence: 87,
-  currentWeight: 82,
-  startWeight: 85,
-  goalWeight: 80,
-}
-
-const mockProgressData = [
-  { date: "Sem 1", weight: 85 },
-  { date: "Sem 2", weight: 84 },
-  { date: "Sem 3", weight: 83.5 },
-  { date: "Sem 4", weight: 83 },
-  { date: "Sem 5", weight: 82.5 },
-  { date: "Sem 6", weight: 82 },
-]
-
-const mockTodayWorkout = {
-  id: 1,
-  name: "Treino A - Peito e Tríceps",
-  completed: false,
-  exercises: [
-    { name: "Supino Reto", sets: 4, reps: "8-12", completed: false },
-    { name: "Supino Inclinado", sets: 3, reps: "10-12", completed: false },
-    { name: "Crucifixo", sets: 3, reps: "12-15", completed: false },
-    { name: "Tríceps Testa", sets: 3, reps: "10-12", completed: false },
-  ],
-}
-
-const mockTodayMeals = [
-  { name: "Café da Manhã", time: "07:00", calories: 649, completed: true },
-  { name: "Lanche da Manhã", time: "10:00", calories: 244, completed: true },
-  { name: "Almoço", time: "13:00", calories: 656, completed: false },
-  { name: "Lanche da Tarde", time: "16:00", calories: 312, completed: false },
-  { name: "Jantar", time: "19:00", calories: 482, completed: false },
-  { name: "Ceia", time: "22:00", calories: 326, completed: false },
-]
+import { Area, AreaChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+import { getStudent, getStudentProgress, getActiveDietPlan, getTodayWorkoutSession, getWorkoutSessions } from "@/lib/api"
 
 export default function StudentDashboard() {
   const params = useParams()
   const studentId = params.id as string
-  const { user, userType, isLoading } = useAuth()
+  const { user, userType, isLoading: authLoading } = useAuth()
   const [selectedTab, setSelectedTab] = useState("overview")
-  const totalCalories = mockTodayMeals.reduce((sum, meal) => sum + meal.calories, 0)
-  const consumedCalories = mockTodayMeals.filter((m) => m.completed).reduce((sum, meal) => sum + meal.calories, 0)
+  
+  // State for fetched data
+  const [student, setStudent] = useState<any>(null)
+  const [progressData, setProgressData] = useState<any[]>([])
+  const [todayWorkout, setTodayWorkout] = useState<any>(null)
+  const [activeDiet, setActiveDiet] = useState<any>(null)
+  const [workoutSessions, setWorkoutSessions] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
 
-  if (isLoading) {
+  // Fetch data on mount
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!user?.id) return
+      
+      try {
+        setLoading(true)
+        
+        // Fetch student data, progress, diet, and workout info in parallel
+        const [studentData, progressLogs, diet, todaySession, sessions] = await Promise.all([
+          getStudent(studentId),
+          getStudentProgress(studentId),
+          getActiveDietPlan(studentId).catch(() => null),
+          getTodayWorkoutSession(user.id).catch(() => null),
+          getWorkoutSessions(user.id).catch(() => []),
+        ])
+        
+        setStudent(studentData)
+        setProgressData(progressLogs || [])
+        setActiveDiet(diet)
+        setTodayWorkout(todaySession)
+        setWorkoutSessions(sessions || [])
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (!authLoading && user?.id) {
+      fetchDashboardData()
+    }
+  }, [studentId, user?.id, authLoading])
+
+  // Calculate stats from real data
+  const workoutsThisWeek = workoutSessions.filter(session => {
+    const sessionDate = new Date(session.date)
+    const weekAgo = new Date()
+    weekAgo.setDate(weekAgo.getDate() - 7)
+    return sessionDate >= weekAgo && session.status === 'CMP'
+  }).length
+
+  const currentWeight = progressData[progressData.length - 1]?.current_weight || 0
+  const startWeight = progressData[0]?.start_weight || progressData[0]?.current_weight || 0
+  const goalWeight = progressData[progressData.length - 1]?.goal_weight || 0
+
+  // Format progress data for chart (last 6 weeks)
+  const chartData = progressData.slice(-6).map((log, index) => ({
+    date: `Sem ${index + 1}`,
+    weight: log.current_weight
+  }))
+
+  // Calculate total calories from active diet
+  const totalCalories = activeDiet?.meals?.reduce((sum: number, meal: any) => {
+    const mealCalories = meal.food_items?.reduce((mealSum: number, item: any) => 
+      mealSum + (item.calories * item.quantity / 100), 0) || 0
+    return sum + mealCalories
+  }, 0) || 0
+
+  const consumedCalories = 0 // TODO: Track meal completion
+
+  if (authLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-lg">Carregando...</div>
@@ -83,7 +103,7 @@ export default function StudentDashboard() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Olá, {user?.first_name || mockStudent.name.split(" ")[0]}!</h1>
+              <h1 className="text-2xl font-bold text-foreground">Olá, {user?.first_name || 'Estudante'}!</h1>
               <p className="text-sm text-muted-foreground">Vamos treinar hoje?</p>
             </div>
             <div className="flex items-center gap-3">
@@ -94,8 +114,8 @@ export default function StudentDashboard() {
                 </Link>
               </Button>
               <Avatar>
-                <AvatarImage src={mockStudent.avatar || "/placeholder.svg"} />
-                <AvatarFallback>JS</AvatarFallback>
+                <AvatarImage src={user?.profile_picture || "/placeholder.svg"} />
+                <AvatarFallback>{user?.first_name?.[0] || 'E'}</AvatarFallback>
               </Avatar>
             </div>
           </div>
@@ -110,11 +130,11 @@ export default function StudentDashboard() {
                 <Dumbbell className="h-5 w-5 text-primary" />
               </div>
               <Badge variant="secondary">
-                {mockStats.workoutsThisWeek}/{mockStats.workoutsGoal}
+                {workoutsThisWeek}/5
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-1">Treinos esta semana</p>
-            <Progress value={(mockStats.workoutsThisWeek / mockStats.workoutsGoal) * 100} className="h-2" />
+            <Progress value={(workoutsThisWeek / 5) * 100} className="h-2" />
           </Card>
 
           <Card className="p-4 bg-card border-border">
@@ -122,10 +142,12 @@ export default function StudentDashboard() {
               <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
                 <Apple className="h-5 w-5 text-green-500" />
               </div>
-              <Badge variant="secondary">{mockStats.dietAdherence}%</Badge>
+              <Badge variant="secondary">
+                {totalCalories > 0 ? Math.round((consumedCalories / totalCalories) * 100) : 0}%
+              </Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-1">Adesão à dieta</p>
-            <Progress value={mockStats.dietAdherence} className="h-2" />
+            <Progress value={totalCalories > 0 ? (consumedCalories / totalCalories) * 100 : 0} className="h-2" />
           </Card>
 
           <Card className="p-4 bg-card border-border">
@@ -133,12 +155,14 @@ export default function StudentDashboard() {
               <div className="h-10 w-10 rounded-full bg-purple-500/10 flex items-center justify-center">
                 <TrendingUp className="h-5 w-5 text-purple-500" />
               </div>
-              <Badge variant="secondary">{mockStats.currentWeight} kg</Badge>
+              <Badge variant="secondary">{currentWeight || 0} kg</Badge>
             </div>
             <p className="text-sm text-muted-foreground mb-1">Peso atual</p>
-            <p className="text-xs text-green-500">
-              -{mockStats.startWeight - mockStats.currentWeight}kg desde o início
-            </p>
+            {startWeight > 0 && currentWeight > 0 && (
+              <p className="text-xs text-green-500">
+                -{(startWeight - currentWeight).toFixed(1)}kg desde o início
+              </p>
+            )}
           </Card>
         </div>
 
@@ -156,23 +180,31 @@ export default function StudentDashboard() {
               <Card className="p-6 bg-card border-border">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-foreground">Treino de Hoje</h3>
-                  <Badge variant={mockTodayWorkout.completed ? "default" : "secondary"}>
-                    {mockTodayWorkout.completed ? "Completo" : "Pendente"}
+                  <Badge variant={todayWorkout?.status === 'CMP' ? "default" : "secondary"}>
+                    {todayWorkout?.status === 'CMP' ? "Completo" : "Pendente"}
                   </Badge>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Dumbbell className="h-6 w-6 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-foreground">{mockTodayWorkout.name}</p>
-                      <p className="text-sm text-muted-foreground">{mockTodayWorkout.exercises.length} exercícios</p>
-                    </div>
-                  </div>
-                  <Button className="w-full" asChild>
-                    <Link href={`/student/${studentId}/workout`}>Iniciar Treino</Link>
-                  </Button>
+                  {todayWorkout ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <Dumbbell className="h-6 w-6 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{todayWorkout.workout?.name || 'Treino'}</p>
+                          <p className="text-sm text-muted-foreground">{todayWorkout.exercise_logs?.length || 0} exercícios</p>
+                        </div>
+                      </div>
+                      <Button className="w-full" asChild>
+                        <Link href={`/student/${studentId}/workout`}>Iniciar Treino</Link>
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhum treino programado para hoje
+                    </p>
+                  )}
                 </div>
               </Card>
 
@@ -190,9 +222,9 @@ export default function StudentDashboard() {
                     </div>
                     <div className="flex-1">
                       <p className="font-medium text-foreground">
-                        {mockTodayMeals.filter((m) => m.completed).length}/{mockTodayMeals.length} refeições
+                        {activeDiet?.meals?.length || 0} refeições
                       </p>
-                      <Progress value={(consumedCalories / totalCalories) * 100} className="h-2 mt-2" />
+                      <Progress value={totalCalories > 0 ? (consumedCalories / totalCalories) * 100 : 0} className="h-2 mt-2" />
                     </div>
                   </div>
                   <Button className="w-full bg-transparent" variant="outline" asChild>
@@ -204,26 +236,70 @@ export default function StudentDashboard() {
 
             <Card className="p-6 bg-card border-border">
               <h3 className="text-lg font-semibold text-foreground mb-4">Evolução de Peso</h3>
-              <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={mockProgressData}>
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[80, 86]} />
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#93c5fd" 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    style={{ fill: "#93c5fd" }}
+                  />
+                  <YAxis 
+                    stroke="#3b82f6" 
+                    fontSize={12} 
+                    domain={[79, 86]}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}kg`}
+                    style={{ fill: "#3b82f6" }}
+                  />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
+                      backgroundColor: "hsl(var(--popover))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.3)",
+                      color: "hsl(var(--popover-foreground))",
                     }}
+                    labelStyle={{ color: "hsl(var(--popover-foreground))", fontWeight: 600 }}
+                    formatter={(value: number) => [`${value} kg`, "Peso"]}
                   />
-                  <Line
+                  <Area 
                     type="monotone"
                     dataKey="weight"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fill="url(#weightGradient)"
                     name="Peso (kg)"
+                    dot={{
+                      fill: "#3b82f6",
+                      strokeWidth: 2,
+                      r: 4,
+                      stroke: "hsl(var(--background))",
+                    }}
+                    activeDot={{
+                      r: 6,
+                      strokeWidth: 2,
+                      stroke: "hsl(var(--background))",
+                    }}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Sem dados de progresso disponíveis
+                </p>
+              )}
             </Card>
           </TabsContent>
 
@@ -231,33 +307,37 @@ export default function StudentDashboard() {
             <Card className="p-6 bg-card border-border">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-foreground">{mockTodayWorkout.name}</h2>
-                  <p className="text-sm text-muted-foreground">{mockTodayWorkout.exercises.length} exercícios</p>
+                  <h2 className="text-2xl font-bold text-foreground">{todayWorkout?.workout?.name || 'Treino'}</h2>
+                  <p className="text-sm text-muted-foreground">{todayWorkout?.exercise_logs?.length || 0} exercícios</p>
                 </div>
                 <Button>Iniciar Treino</Button>
               </div>
 
               <div className="space-y-3">
-                {mockTodayWorkout.exercises.map((exercise, index) => (
+                {todayWorkout?.exercise_logs?.length > 0 ? todayWorkout.exercise_logs.map((exerciseLog: any, index: number) => (
                   <Card key={index} className="p-4 bg-muted/30 border-border">
                     <div className="flex items-center gap-4">
                       <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                         <span className="text-lg font-bold text-primary">{index + 1}</span>
                       </div>
                       <div className="flex-1">
-                        <h4 className="font-semibold text-foreground">{exercise.name}</h4>
+                        <h4 className="font-semibold text-foreground">{exerciseLog.exercise?.name || 'Exercício'}</h4>
                         <p className="text-sm text-muted-foreground">
-                          {exercise.sets} séries × {exercise.reps} repetições
+                          {exerciseLog.sets_completed || 0}/{exerciseLog.sets || 0} séries × {exerciseLog.reps || 0} repetições
                         </p>
                       </div>
-                      {exercise.completed ? (
+                      {exerciseLog.completed ? (
                         <CheckCircle2 className="h-6 w-6 text-green-500" />
                       ) : (
                         <Circle className="h-6 w-6 text-muted-foreground" />
                       )}
                     </div>
                   </Card>
-                ))}
+                )) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nenhum exercício disponível
+                  </p>
+                )}
               </div>
             </Card>
           </TabsContent>
@@ -274,36 +354,45 @@ export default function StudentDashboard() {
             </Card>
 
             <div className="space-y-3">
-              {mockTodayMeals.map((meal, index) => (
-                <Card key={index} className="p-4 bg-card border-border">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                        <Apple className="h-5 w-5 text-green-500" />
-                      </div>
-                      <div>
-                        <h4 className="font-semibold text-foreground">{meal.name}</h4>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {meal.time}
-                          </span>
-                          <span>{meal.calories} kcal</span>
+              {activeDiet?.meals && activeDiet.meals.length > 0 ? activeDiet.meals.map((meal: any, index: number) => {
+                const mealCalories = meal.food_items?.reduce((sum: number, item: any) => 
+                  sum + (item.calories * item.quantity / 100), 0) || 0
+                
+                return (
+                  <Card key={index} className="p-4 bg-card border-border">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                          <Apple className="h-5 w-5 text-green-500" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-foreground">{meal.meal_type || 'Refeição'}</h4>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {meal.time || '--:--'}
+                            </span>
+                            <span>{Math.round(mealCalories)} kcal</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-2">
+                        {meal.completed ? (
+                          <Badge variant="default">Registrado</Badge>
+                        ) : (
+                          <Button variant="outline" size="sm">
+                            Registrar
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {meal.completed ? (
-                        <Badge variant="default">Registrado</Badge>
-                      ) : (
-                        <Button variant="outline" size="sm">
-                          Registrar
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                )
+              }) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nenhuma refeição cadastrada
+                </p>
+              )}
             </div>
           </TabsContent>
 
@@ -312,53 +401,101 @@ export default function StudentDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Card className="p-4 bg-card border-border">
                 <p className="text-sm text-muted-foreground mb-1">Peso Inicial</p>
-                <p className="text-3xl font-bold text-foreground">{mockStats.startWeight} kg</p>
+                <p className="text-3xl font-bold text-foreground">{startWeight} kg</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {new Date(mockStudent.startDate).toLocaleDateString("pt-BR")}
+                  {progressData[0]?.date ? new Date(progressData[0].date).toLocaleDateString("pt-BR") : '--/--/----'}
                 </p>
               </Card>
 
               <Card className="p-4 bg-card border-border">
                 <p className="text-sm text-muted-foreground mb-1">Peso Atual</p>
-                <p className="text-3xl font-bold text-foreground">{mockStats.currentWeight} kg</p>
-                <p className="text-xs text-green-500 mt-1">
-                  -{mockStats.startWeight - mockStats.currentWeight}kg (
-                  {(((mockStats.startWeight - mockStats.currentWeight) / mockStats.startWeight) * 100).toFixed(1)}%)
-                </p>
+                <p className="text-3xl font-bold text-foreground">{currentWeight} kg</p>
+                {startWeight > 0 && currentWeight > 0 && startWeight !== currentWeight && (
+                  <p className="text-xs text-green-500 mt-1">
+                    -{(startWeight - currentWeight).toFixed(1)}kg (
+                    {(((startWeight - currentWeight) / startWeight) * 100).toFixed(1)}%)
+                  </p>
+                )}
               </Card>
 
               <Card className="p-4 bg-card border-border">
                 <p className="text-sm text-muted-foreground mb-1">Meta</p>
-                <p className="text-3xl font-bold text-foreground">{mockStats.goalWeight} kg</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Faltam {mockStats.currentWeight - mockStats.goalWeight}kg
-                </p>
+                <p className="text-3xl font-bold text-foreground">{goalWeight} kg</p>
+                {goalWeight > 0 && currentWeight > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Faltam {Math.abs(currentWeight - goalWeight).toFixed(1)}kg
+                  </p>
+                )}
               </Card>
             </div>
 
             {/* Progress Chart */}
             <Card className="p-6 bg-card border-border">
               <h3 className="text-lg font-semibold text-foreground mb-4">Evolução de Peso (6 semanas)</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={mockProgressData}>
-                  <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} domain={[80, 86]} />
+              {chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={350}>
+                  <AreaChart data={chartData}>
+                  <defs>
+                    <linearGradient id="weightGradientProgress" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.5} />
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.05} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#93c5fd" 
+                    fontSize={12}
+                    tickLine={false}
+                    axisLine={false}
+                    style={{ fill: "#93c5fd" }}
+                  />
+                  <YAxis 
+                    stroke="#3b82f6" 
+                    fontSize={12} 
+                    domain={[79, 86]}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}kg`}
+                    style={{ fill: "#3b82f6" }}
+                  />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
+                      backgroundColor: "hsl(var(--popover))",
                       border: "1px solid hsl(var(--border))",
                       borderRadius: "8px",
+                      boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.3)",
+                      color: "hsl(var(--popover-foreground))",
                     }}
+                    labelStyle={{ color: "hsl(var(--popover-foreground))", fontWeight: 600 }}
+                    formatter={(value: number) => [`${value} kg`, "Peso"]}
                   />
-                  <Line
+                  <Area
                     type="monotone"
                     dataKey="weight"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
+                    stroke="#3b82f6"
+                    strokeWidth={3}
+                    fill="url(#weightGradientProgress)"
                     name="Peso (kg)"
+                    dot={{
+                      fill: "#3b82f6",
+                      strokeWidth: 2,
+                      r: 5,
+                      stroke: "hsl(var(--background))",
+                    }}
+                    activeDot={{
+                      r: 7,
+                      strokeWidth: 2,
+                      stroke: "hsl(var(--background))",
+                    }}
                   />
-                </LineChart>
+                </AreaChart>
               </ResponsiveContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Sem dados de progresso disponíveis
+                </p>
+              )}
             </Card>
 
             {/* Activity Summary */}
@@ -370,7 +507,9 @@ export default function StudentDashboard() {
                     <Dumbbell className="h-6 w-6 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">12</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {workoutSessions.filter(s => s.status === 'CMP').length}
+                    </p>
                     <p className="text-sm text-muted-foreground">Treinos Completos</p>
                   </div>
                 </div>
@@ -380,7 +519,9 @@ export default function StudentDashboard() {
                     <Apple className="h-6 w-6 text-green-500" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">87%</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {totalCalories > 0 ? Math.round((consumedCalories / totalCalories) * 100) : 0}%
+                    </p>
                     <p className="text-sm text-muted-foreground">Adesão à Dieta</p>
                   </div>
                 </div>
@@ -390,7 +531,11 @@ export default function StudentDashboard() {
                     <Calendar className="h-6 w-6 text-blue-500" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">42</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {workoutSessions.length > 0 ? 
+                        Math.ceil((new Date().getTime() - new Date(workoutSessions[0].date).getTime()) / (1000 * 60 * 60 * 24)) 
+                        : 0}
+                    </p>
                     <p className="text-sm text-muted-foreground">Dias de Treino</p>
                   </div>
                 </div>
@@ -400,7 +545,11 @@ export default function StudentDashboard() {
                     <TrendingUp className="h-6 w-6 text-purple-500" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-foreground">85%</p>
+                    <p className="text-2xl font-bold text-foreground">
+                      {startWeight > 0 && goalWeight > 0 && currentWeight > 0 ? 
+                        Math.round(((startWeight - currentWeight) / (startWeight - goalWeight)) * 100)
+                        : 0}%
+                    </p>
                     <p className="text-sm text-muted-foreground">Progresso Geral</p>
                   </div>
                 </div>

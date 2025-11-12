@@ -13,6 +13,7 @@ class Student(models.Model):
 class ProgressLog(models.Model):
     student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='progress_logs')
     date = models.DateField()
+    height = models.FloatField(blank=True, null=True)
     goal_weight = models.FloatField(blank=True, null=True)
     current_weight = models.FloatField()
     start_weight = models.FloatField(blank=True, null=True)

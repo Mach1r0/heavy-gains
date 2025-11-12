@@ -1,5 +1,6 @@
+from student.serializers import StudentSerializer
 from rest_framework import serializers
-from .models import Teacher
+from .models import Appointment, Teacher, TeacherStudents
 from users.models import User
 
 class TeacherSerializer(serializers.ModelSerializer):
@@ -56,7 +57,6 @@ class TeacherSerializer(serializers.ModelSerializer):
         }
         password = validated_data.pop('password')
         
-        # Remove specialization do validated_data se existir (não está no model Teacher)
         specialization = validated_data.pop('specialization', '')
         if specialization:
             validated_data['specialties'] = specialization
@@ -75,3 +75,63 @@ class TeacherSerializer(serializers.ModelSerializer):
         instance.specialties = validated_data.get('specialties', instance.specialties)
         instance.save()
         return instance
+    
+class ScheduleTeacherSerializer(serializers.ModelSerializer):
+    teacher = TeacherSerializer(read_only=True)
+
+    class Meta:
+        model = Teacher
+        fields = [
+            'id', 'user', 'teacher', 'day_of_week', 'start_time', 'end_time',
+            'is_available'
+         ]
+        read_only_fields = ['id', 'teacher']
+
+class ScheduleExceptionSerializer(serializers.ModelSerializer):
+    teacher = TeacherSerializer(read_only=True)
+
+    class Meta:
+        model = Teacher
+        fields = [
+            'id', 'user', 'teacher', 'date', 'is_available', 'reason',
+            'start_time', 'end_time'
+         ]
+        read_only_fields = ['id', 'teacher']
+
+class AppointmentSerializer(serializers.ModelSerializer):
+    teacher = TeacherSerializer(read_only=True)
+    student = StudentSerializer(read_only=True)
+
+    class Meta:
+        model = Appointment
+        fields = [
+            'id', 'user', 'teacher', 'student', 'date', 'start_time', 'end_time', 'status', 'notes',
+            'created_at', 'updated_at'
+         ]
+        read_only_fields = ['id', 'teacher', 'student', 'created_at', 'updated_at']
+
+class TeacherStudentsSerializer(serializers.ModelSerializer):
+    student = StudentSerializer(read_only=True)
+    student_id = serializers.IntegerField(source='student.id', read_only=True)
+    student_name = serializers.SerializerMethodField()
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
+    is_evaluated = serializers.SerializerMethodField()  
+    evaluation_status = serializers.SerializerMethodField()  
+
+    class Meta:
+        model = TeacherStudents
+        fields = [
+            'id', 'student', 'student_id', 'student_name', 
+            'student_user_id', 'assigned_at', 'is_active',
+            'is_evaluated', 'evaluation_status'  
+        ]
+        read_only_fields = ['id', 'assigned_at']
+    
+    def get_student_name(self, obj):
+        return f"{obj.student.user.first_name} {obj.student.user.last_name}"
+    
+    def get_is_evaluated(self, obj):
+        return obj.is_fully_evaluated()
+    
+    def get_evaluation_status(self, obj):
+        return obj.get_evaluation_status()
