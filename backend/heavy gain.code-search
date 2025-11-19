@@ -1,0 +1,41 @@
+# Query: heavy gain
+# ContextLines: 1
+
+8 results - 6 files
+
+backend/seed_database.py:
+  1  """
+  2: Database Seeding Script for Overload Gainz
+  3  Run this script to populate the database with sample data
+
+frontend/app/page.tsx:
+   21              <span className="text-2xl font-black text-primary">
+   22:                 Overload Gainz
+   23              </span>
+
+  143              <Dumbbell className="h-5 w-5 text-primary" />
+  144:             <span className="font-bold text-lg">Overload Gainz</span>
+  145            </div>
+  146            <p className="text-sm text-muted-foreground">
+  147:             © 2025 Overload Gainz. Transformando corpos e mentes.
+  148            </p>
+
+frontend/app/login/page.tsx:
+  77            <Dumbbell className="h-8 w-8 text-primary" />
+  78:           <span className="text-2xl font-bold">Overload Gainz</span>
+  79          </div>
+
+frontend/app/register/page.tsx:
+  159            <Dumbbell className="h-8 w-8 text-primary" />
+  160:           <span className="text-2xl font-bold">Overload Gainz</span>
+  161          </div>
+
+frontend/components/nav-header.tsx:
+  33              <Dumbbell className="h-6 w-6 text-primary" />
+  34:             <span className="text-xl font-semibold">Overload Gainz</span>
+  35            </Link>
+
+frontend/components/sidebar-nav.tsx:
+  116              <Dumbbell className="h-6 w-6 text-primary" />
+  117:             <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Overload Gainz</span>
+  118            </Link>

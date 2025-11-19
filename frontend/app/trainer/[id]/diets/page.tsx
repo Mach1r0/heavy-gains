@@ -49,23 +49,44 @@ export default function DietsPage() {
   const fetchDiets = async () => {
     try {
       setLoading(true)
+      const user = authApi.getUserFromStorage()
+      
+      if (!user) {
+        console.error('No user found')
+        return
+      }
+      
+      // Get teacher ID
+      const teacherResponse = await import("@/lib/api").then(api => api.apiClient.get(`/trainer/teachers/?user=${user.id}`))
+      const teacher = teacherResponse.data[0]
+      
+      if (!teacher) {
+        console.error('No teacher found for user')
+        return
+      }
+      
       const { getDietPlans } = await import("@/lib/api")
       const dietsData = await getDietPlans()
       
-      // Transform data to include student names and meals count
-      const transformedDiets = dietsData.map((diet: any) => ({
-        id: diet.id,
-        name: diet.name,
-        goal: diet.goal,
-        start_date: diet.start_date,
-        end_date: diet.end_date,
-        is_active: diet.is_active,
-        meals_count: diet.meals?.length || 0,
-        student_name: diet.student?.user?.first_name 
-          ? `${diet.student.user.first_name} ${diet.student.user.last_name}`.trim()
-          : 'Aluno',
-      }))
+      console.log('Diets data from API:', dietsData)
       
+      // Filter diets by teacher and transform data
+      const transformedDiets = dietsData
+        .filter((diet: any) => diet.teacher?.id === user.id)
+        .map((diet: any) => ({
+          id: diet.id,
+          name: diet.name,
+          goal: diet.goal,
+          start_date: diet.start_date,
+          end_date: diet.end_date,
+          is_active: diet.is_active,
+          meals_count: diet.meals?.length || 0,
+          student_name: diet.student?.first_name 
+            ? `${diet.student.first_name} ${diet.student.last_name || ''}`.trim()
+            : 'Aluno',
+        }))
+      
+      console.log('Transformed diets:', transformedDiets)
       setDiets(transformedDiets)
     } catch (error) {
       console.error('Error fetching diets:', error)

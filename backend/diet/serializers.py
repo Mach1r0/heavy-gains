@@ -120,7 +120,10 @@ class DietPlanCreateSerializer(serializers.ModelSerializer):
         teacher = self.context['request'].user
         
         User = get_user_model()
-        student = User.objects.get(id=student_id)
+        try:
+            student = User.objects.get(id=student_id)
+        except User.DoesNotExist:
+            raise serializers.ValidationError({"student_id": "User not found. Send a valid user id (not student id)."})
         
         diet_plan = DietPlan.objects.create(
             student=student,
@@ -135,6 +138,36 @@ class DietPlanCreateSerializer(serializers.ModelSerializer):
                 meal_serializer.save(diet_plan=diet_plan)
         
         return diet_plan
+    
+    def update(self, instance, validated_data):
+        meals_data = validated_data.pop('meals', [])
+        student_id = validated_data.pop('student_id', None)
+        
+        # Update basic fields
+        instance.name = validated_data.get('name', instance.name)
+        instance.goal = validated_data.get('goal', instance.goal)
+        instance.description = validated_data.get('description', instance.description)
+        instance.target_calories = validated_data.get('target_calories', instance.target_calories)
+        instance.start_date = validated_data.get('start_date', instance.start_date)
+        instance.end_date = validated_data.get('end_date', instance.end_date)
+        
+        if student_id:
+            User = get_user_model()
+            instance.student = User.objects.get(id=student_id)
+        
+        instance.save()
+        
+        # Delete existing meals
+        instance.meals.all().delete()
+        
+        # Create new meals
+        for meal_data in meals_data:
+            meal_data['diet_plan'] = instance
+            meal_serializer = MealCreateSerializer(data=meal_data)
+            if meal_serializer.is_valid():
+                meal_serializer.save(diet_plan=instance)
+        
+        return instance
 
     def to_representation(self, instance):
         return DietPlanSerializer(instance, context=self.context).data

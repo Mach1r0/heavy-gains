@@ -8,6 +8,7 @@ import { Plus, Calendar, Edit, Eye, Dumbbell } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { TrainingForm } from "@/components/training-form"
 import { TrainingDetails } from "@/components/training-details"
+import { apiClient } from "@/lib/api/client"
 
 interface Training {
   id: number
@@ -36,43 +37,33 @@ const goalColors = {
   GEN: "bg-gray-100 text-gray-800",
 }
 
-export function TrainingManagement({ studentId }: { studentId: string }) {
+export function TrainingManagement({ studentId, userId }: { studentId: string; userId: string }) {
   const [trainings, setTrainings] = useState<Training[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedTraining, setSelectedTraining] = useState<Training | null>(null)
-  const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const router = require('next/navigation').useRouter();
 
   useEffect(() => {
-    // TODO: Fetch trainings from API
-    // Mock data for now
-    const mockTrainings: Training[] = [
-      {
-        id: 1,
-        name: "Treino de Hipertrofia - ABC",
-        goal: "HYP",
-        description: "Treino focado em ganho de massa muscular",
-        start_date: "2025-01-01",
-        end_date: "2025-03-31",
-        is_active: true,
-        workouts_count: 5,
-      },
-      {
-        id: 2,
-        name: "Treino de Força",
-        goal: "STR",
-        description: "Treino para aumento de força máxima",
-        start_date: "2024-10-01",
-        end_date: "2024-12-31",
-        is_active: false,
-        workouts_count: 4,
-      },
-    ]
+    const fetchTrainings = async () => {
+      try {
+        setLoading(true)
+        const response = await apiClient.get(`/training/?student=${userId}`)
+        const trainingsWithCount = response.data.map((training: any) => ({
+          ...training,
+          workouts_count: training.workouts?.length || 0,
+        }))
+        setTrainings(trainingsWithCount)
+      } catch (error) {
+        console.error('Error fetching trainings:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    setTrainings(mockTrainings)
-    setLoading(false)
-  }, [studentId])
+    fetchTrainings()
+  }, [userId])
 
   const handleEdit = (training: Training) => {
     setSelectedTraining(training)
@@ -96,20 +87,17 @@ export function TrainingManagement({ studentId }: { studentId: string }) {
           <h2 className="text-2xl font-bold">Planos de Treino</h2>
           <p className="text-muted-foreground">Gerencie os treinos do aluno</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Treino
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Criar Novo Treino</DialogTitle>
-            </DialogHeader>
-            <TrainingForm studentId={studentId} onSuccess={() => setIsCreateOpen(false)} />
-          </DialogContent>
-        </Dialog>
+        <Button
+          className="flex items-center gap-2"
+          onClick={() => {
+            // Replace with correct trainer id if available in props/context
+            const trainerId = typeof window !== 'undefined' ? window.location.pathname.split('/')[2] : '';
+            router.push(`/trainer/${trainerId}/workouts/new?studentId=${studentId}`);
+          }}
+        >
+          <Plus className="h-4 w-4" />
+          Novo Treino
+        </Button>
       </div>
 
       {/* Trainings List */}

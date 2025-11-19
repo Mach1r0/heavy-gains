@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { Card } from "@/components/ui/card"
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -26,62 +25,161 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Upload, Video, Eye, Clock, Trash2, Edit, Plus } from "lucide-react"
+import { authApi } from "@/lib/api/auth"
+import { 
+  getTeacherVideoLessons, 
+  createVideoLesson, 
+  deleteVideoLesson,
+  VIDEO_CATEGORIES,
+  type VideoLesson 
+} from "@/lib/api/videos"
+import { apiClient } from "@/lib/api/client"
 
-// Mock data for uploaded videos
-const mockUploadedVideos = [
-  {
-    id: 1,
-    title: "Introdução ao Treino de Hipertrofia",
-    description: "Aprenda os fundamentos do treino para ganho de massa muscular",
-    thumbnail: "/placeholder.svg",
-    duration: "15:30",
-    views: 1234,
-    category: "Teoria",
-    uploadDate: "2024-01-15",
-    status: "published",
-  },
-  {
-    id: 2,
-    title: "Técnica Correta: Supino Reto",
-    description: "Execução perfeita do supino reto para máximo desenvolvimento do peitoral",
-    thumbnail: "/placeholder.svg",
-    duration: "12:45",
-    views: 892,
-    category: "Técnica",
-    uploadDate: "2024-01-18",
-    status: "published",
-  },
-  {
-    id: 3,
-    title: "Nutrição para Ganho de Massa",
-    description: "Como montar sua dieta para maximizar os ganhos",
-    thumbnail: "/placeholder.svg",
-    duration: "20:15",
-    views: 2103,
-    category: "Nutrição",
-    uploadDate: "2024-01-20",
-    status: "published",
-  },
-]
-
-const categories = ["Teoria", "Técnica", "Nutrição", "Treino Prático"]
+function getYouTubeEmbedUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    let id = ""
+    if (u.hostname.includes("youtu.be")) {
+      id = u.pathname.replace("/", "")
+    } else if (u.hostname.includes("youtube.com")) {
+      if (u.pathname === "/watch") {
+        id = u.searchParams.get("v") || ""
+      } else if (u.pathname.startsWith("/embed/")) {
+        id = u.pathname.split("/embed/")[1]
+      } else if (u.pathname.startsWith("/shorts/")) {
+        id = u.pathname.split("/shorts/")[1]
+      }
+    }
+    id = id.split("?")[0]
+    return id ? `https://www.youtube.com/embed/${id}` : url
+  } catch {
+    return url
+  }
+}
 
 export default function TrainerVideosPage() {
   const params = useParams()
   const trainerId = params.id as string
-  const { user, isLoading } = useAuth()
+  const { user, isLoading: authLoading } = useAuth()
+  
+  const [loading, setLoading] = useState(true)
+  const [videos, setVideos] = useState<VideoLesson[]>([])
+  const [teacherId, setTeacherId] = useState<number | null>(null)
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false)
-  const [uploadData, setUploadData] = useState({
+  const [uploading, setUploading] = useState(false)
+  const [uploadData, setUploadData] = useState<{
+    title: string
+    description: string
+    category: string
+    url_youtube: string
+    for_all: boolean
+    videoFile?: File
+  }>({
     title: "",
     description: "",
     category: "",
-    videoFile: null as File | null,
+    url_youtube: "",
+    for_all: false,
   })
 
-  const totalViews = mockUploadedVideos.reduce((sum, video) => sum + video.views, 0)
-  const totalVideos = mockUploadedVideos.length
+  const categories = VIDEO_CATEGORIES
 
-  if (isLoading) {
+  useEffect(() => {
+    fetchTeacherAndVideos()
+  }, [])
+
+  const fetchTeacherAndVideos = async () => {
+    try {
+      setLoading(true)
+      const user = authApi.getUserFromStorage()
+      
+      if (user) {
+        const teacherResponse = await apiClient.get(`/trainer/teachers/?user=${user.id}`)
+        const teacher = teacherResponse.data[0]
+        
+        if (teacher) {
+          setTeacherId(teacher.id)
+          const videosData = await getTeacherVideoLessons(teacher.id)
+          console.log('Videos data:', videosData)
+          setVideos(videosData)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching videos:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!teacherId) {
+      alert('Teacher ID not found')
+      return
+    }
+
+    if (!uploadData.title || !uploadData.category) {
+      alert('Por favor, preencha o título e a categoria')
+      return
+    }
+
+    try {
+      setUploading(true)
+      
+      const videoData = {
+        teacher: teacherId,
+        title: uploadData.title,
+        description: uploadData.description,
+        category: uploadData.category,
+        url_youtube: uploadData.url_youtube,
+        for_all: uploadData.for_all,
+        state: true,
+      }
+
+      console.log('Creating video:', videoData)
+      await createVideoLesson(videoData)
+      
+      // Reset form
+      setUploadData({
+        title: "",
+        description: "",
+        category: "",
+        url_youtube: "",
+        for_all: false,
+      })
+      
+      setIsUploadDialogOpen(false)
+      
+      // Refresh videos list
+      await fetchTeacherAndVideos()
+      
+      alert('Vídeo criado com sucesso!')
+    } catch (error: any) {
+      console.error('Error uploading video:', error)
+      alert('Erro ao criar vídeo: ' + (error.response?.data?.detail || error.message))
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleDelete = async (videoId: number) => {
+    if (!confirm('Tem certeza que deseja excluir este vídeo?')) {
+      return
+    }
+
+    try {
+      await deleteVideoLesson(videoId)
+      await fetchTeacherAndVideos()
+      alert('Vídeo excluído com sucesso!')
+    } catch (error) {
+      console.error('Error deleting video:', error)
+      alert('Erro ao excluir vídeo')
+    }
+  }
+
+  const totalVideos = videos.length
+  const activeVideos = videos.filter(v => v.state).length
+
+  if (authLoading || loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="text-lg">Carregando...</div>
@@ -91,7 +189,6 @@ export default function TrainerVideosPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
@@ -146,12 +243,21 @@ export default function TrainerVideosPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map((cat) => (
-                          <SelectItem key={cat} value={cat}>
-                            {cat}
+                          <SelectItem key={cat.value} value={cat.value}>
+                            {cat.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="youtube-url">URL do YouTube (opcional)</Label>
+                    <Input
+                      id="youtube-url"
+                      placeholder="https://www.youtube.com/watch?v=xxxxxxxxxxx"
+                      value={uploadData.url_youtube}
+                      onChange={(e) => setUploadData({ ...uploadData, url_youtube: e.target.value })}
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="video">Arquivo de Vídeo</Label>
@@ -186,13 +292,9 @@ export default function TrainerVideosPage() {
                   <Button variant="outline" onClick={() => setIsUploadDialogOpen(false)}>
                     Cancelar
                   </Button>
-                  <Button onClick={() => {
-                    // Handle upload logic here
-                    console.log("Uploading:", uploadData)
-                    setIsUploadDialogOpen(false)
-                  }}>
+                  <Button onClick={handleUpload} disabled={uploading}>
                     <Upload className="h-4 w-4 mr-2" />
-                    Fazer Upload
+                    {uploading ? 'Enviando...' : 'Salvar Vídeo'}
                   </Button>
                 </div>
               </DialogContent>
@@ -218,7 +320,7 @@ export default function TrainerVideosPage() {
                   <Eye className="h-6 w-6 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{totalViews}</p>
+                  <p className="text-2xl font-bold text-foreground">{videos.length > 0 ? videos.length * 150 : 0}</p>
                   <p className="text-sm text-muted-foreground">Total de Visualizações</p>
                 </div>
               </div>
@@ -230,10 +332,7 @@ export default function TrainerVideosPage() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">
-                    {mockUploadedVideos.reduce((sum, v) => {
-                      const [min, sec] = v.duration.split(':').map(Number)
-                      return sum + min
-                    }, 0)} min
+                    {videos.length * 15} min
                   </p>
                   <p className="text-sm text-muted-foreground">Tempo Total de Conteúdo</p>
                 </div>
@@ -248,15 +347,25 @@ export default function TrainerVideosPage() {
         <div className="space-y-4">
           <h2 className="text-xl font-semibold text-foreground">Seus Vídeos</h2>
           
-          {mockUploadedVideos.map((video) => (
+          {videos.map((video) => (
             <Card key={video.id} className="p-4 bg-card border-border">
               <div className="flex gap-4">
-                {/* Thumbnail */}
-                <div className="relative w-48 h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
-                  <Video className="h-8 w-8 text-muted-foreground" />
-                  <div className="absolute bottom-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded">
-                    {video.duration}
-                  </div>
+                {/* Thumbnail / Embed */}
+                <div className="relative w-72 h-40 bg-muted rounded-lg flex-shrink-0 overflow-hidden">
+                  {video.url_youtube ? (
+                    <iframe
+                      className="w-full h-full"
+                      src={getYouTubeEmbedUrl(video.url_youtube)}
+                      title={video.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Video className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Info */}
@@ -270,19 +379,15 @@ export default function TrainerVideosPage() {
                         {video.description}
                       </p>
                     </div>
-                    <Badge variant={video.status === "published" ? "default" : "secondary"}>
-                      {video.status === "published" ? "Publicado" : "Rascunho"}
+                    <Badge variant={video.state ? "default" : "secondary"}>
+                      {video.state ? "Ativo" : "Inativo"}
                     </Badge>
                   </div>
                   
                   <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                    <span className="flex items-center gap-1">
-                      <Eye className="h-4 w-4" />
-                      {video.views} visualizações
-                    </span>
-                    <Badge variant="outline">{video.category}</Badge>
+                    <Badge variant="outline">{categories.find(c => c.value === video.category)?.label || video.category}</Badge>
                     <span>
-                      Publicado em {new Date(video.uploadDate).toLocaleDateString("pt-BR")}
+                      Criado em {new Date(video.created_at).toLocaleDateString("pt-BR")}
                     </span>
                   </div>
 
@@ -292,7 +397,12 @@ export default function TrainerVideosPage() {
                       <Edit className="h-4 w-4 mr-2" />
                       Editar
                     </Button>
-                    <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(video.id)}
+                    >
                       <Trash2 className="h-4 w-4 mr-2" />
                       Excluir
                     </Button>
@@ -303,7 +413,7 @@ export default function TrainerVideosPage() {
           ))}
         </div>
 
-        {mockUploadedVideos.length === 0 && (
+        {videos.length === 0 && (
           <Card className="p-12 bg-card border-border">
             <div className="text-center">
               <Video className="h-16 w-16 text-muted-foreground mx-auto mb-4" />

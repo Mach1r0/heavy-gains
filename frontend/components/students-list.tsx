@@ -9,6 +9,7 @@ import { CheckCircle2, XCircle } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { authApi } from "@/lib/api/auth"
+import { apiClient } from "@/lib/api/client"
 
 interface Student {
   id: number
@@ -29,8 +30,15 @@ interface Student {
   student_user_id: number
   assigned_at: string
   is_active: boolean
-  has_measurements?: boolean
-  has_photos?: boolean
+  evaluation_status?: {
+    has_initial_photos: boolean
+    has_diet_plan: boolean
+    has_training_plan: boolean
+    has_progress_log: boolean
+    has_body_measurements: boolean
+    completion_percentage: number
+    is_complete: boolean
+  }
 }
 
 export function StudentsList() {
@@ -57,18 +65,11 @@ export function StudentsList() {
       // Get teacher profile
       const teacher = await getTeacherByUserId(user.id)
       
-      // Get teacher's students
-  const studentsData = await getTeacherStudents()
-  console.log('Fetched studentsData:', studentsData)
-      
-      // Add has_measurements and has_photos flags (would need backend support)
-      const studentsWithFlags = studentsData.map((student: any) => ({
-        ...student,
-        has_measurements: false, // TODO: Implement backend check
-        has_photos: false, // TODO: Implement backend check
-      }))
-      
-      setStudents(studentsWithFlags)
+      // Get teacher's students (evaluation_status is already included)
+      const studentsData = await getTeacherStudents()
+      console.log('Fetched studentsData:', studentsData)
+
+      setStudents(studentsData)
     } catch (error: any) {
       console.error('Error fetching students:', error);
       if (error.response) {
@@ -81,8 +82,16 @@ export function StudentsList() {
     }
   }
 
-  const evaluatedStudents = students.filter((s) => s.has_measurements || s.has_photos)
-  const notEvaluatedStudents = students.filter((s) => !s.has_measurements && !s.has_photos)
+  const evaluatedStudents = students.filter((s) => 
+    s.evaluation_status?.has_diet_plan || 
+    s.evaluation_status?.has_training_plan || 
+    s.evaluation_status?.has_progress_log
+  )
+  const notEvaluatedStudents = students.filter((s) => 
+    !s.evaluation_status?.has_diet_plan && 
+    !s.evaluation_status?.has_training_plan && 
+    !s.evaluation_status?.has_progress_log
+  )
 
   if (loading) {
     return <div className="text-center py-8">Carregando...</div>
@@ -152,6 +161,15 @@ function StudentCard({ student }: { student: Student }) {
   const trainerId = trainerIndex >= 0 ? segments[trainerIndex + 1] ?? "" : ""
   const href = trainerId ? `/trainer/${trainerId}/students/${student.student_id}` : `/students/${student.student_id}`
 
+  // Determine missing items (what trainer hasn't provided yet)
+  const missing: string[] = [];
+  if (!student.evaluation_status?.has_diet_plan) missing.push("Falta dieta");
+  if (!student.evaluation_status?.has_training_plan) missing.push("Falta treino");
+  // Only show "Falta feedback" if student has uploaded photos
+  if (student.evaluation_status?.has_initial_photos && !student.evaluation_status?.has_progress_log) {
+    missing.push("Falta feedback");
+  }
+
   return (
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -170,7 +188,14 @@ function StudentCard({ student }: { student: Student }) {
         <div className="flex gap-2 text-sm">
           {student.student.age && <Badge variant="outline">{student.student.age} anos</Badge>}
         </div>
-
+        {/* Show missing items if any */}
+        {missing.length > 0 && (
+          <div className="flex gap-2 flex-wrap mt-2">
+            {missing.map((item) => (
+              <Badge key={item} variant="destructive">{item}</Badge>
+            ))}
+          </div>
+        )}
         <Button asChild className="w-full">
           <Link href={href}>Ver Detalhes</Link>
         </Button>

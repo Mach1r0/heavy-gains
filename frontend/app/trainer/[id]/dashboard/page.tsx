@@ -19,7 +19,7 @@ import {
   AlertCircle,
 } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
 import { getTeacherByUserId, getTeacherStudents, getTeacherStats } from "@/lib/api"
@@ -43,7 +43,7 @@ interface Stats {
   avgProgress: number
 }
 
-export default function TrainerDashboard() {
+export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showPendingOnly, setShowPendingOnly] = useState(false)
   const [students, setStudents] = useState<StudentDisplay[]>([])
@@ -54,7 +54,8 @@ export default function TrainerDashboard() {
     avgProgress: 0,
   })
   const [loading, setLoading] = useState(true)
-  const pathname = usePathname()
+  const params = useParams()
+  const trainerId = params.id as string
   const [userId, setUserId] = useState<string | null>(null)
   const [teacherId, setTeacherId] = useState<number | null>(null)
 
@@ -62,36 +63,32 @@ export default function TrainerDashboard() {
     const user = authApi.getUserFromStorage()
     if (user) {
       setUserId(user.id.toString())
-      fetchTeacherData(user.id)
+      fetchTeacherData()
     }
   }, [])
 
-  const fetchTeacherData = async (userId: number) => {
+  const fetchTeacherData = async () => {
     try {
       setLoading(true)
-      // Get teacher profile
-      const teacher = await getTeacherByUserId(userId)
+      const teacher = await getTeacherByUserId()
       setTeacherId(teacher.id)
       
-      // Get teacher's students
-  const studentsData = await getTeacherStudents()
+      const studentsData = await getTeacherStudents()
       
-      // Transform students data
       const transformedStudents: StudentDisplay[] = studentsData.map((student: any) => ({
-        id: student.id,
-        name: `${student.user.first_name} ${student.user.last_name}`.trim() || student.user.username,
-        email: student.user.email,
-        avatar: student.user.profile_picture,
-        status: 'active', // TODO: Implement status logic
-        workoutsCompleted: 0, // TODO: Get from workout sessions
-        lastWorkout: '', // TODO: Get from workout sessions
-        progress: 0, // TODO: Calculate from progress logs
-        pendingTasks: [], // TODO: Implement pending tasks
+        id: student.student_id ?? student.student?.id ?? student.id,
+        name: student.student_name || `${student.student?.user_data?.first_name || ''} ${student.student?.user_data?.last_name || ''}`.trim() || student.student?.user_data?.username || 'Sem nome',
+        email: student.student?.user_data?.email || '',
+        avatar: student.student?.user_data?.profile_picture || null,
+        status: 'active',
+        workoutsCompleted: 0, 
+        lastWorkout: '',
+        progress: 0,
+        pendingTasks: [], 
       }))
       
       setStudents(transformedStudents)
       
-      // Get stats
       const statsData = await getTeacherStats(teacher.id)
       setStats({
         totalStudents: statsData.total_students,
@@ -115,13 +112,13 @@ export default function TrainerDashboard() {
   })
 
   const studentsWithPending = students.filter((s) => s.pendingTasks.length > 0).length
-    
-      if (!userId) {
-        return null
-      }
+
+  if (!userId) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -150,7 +147,6 @@ export default function TrainerDashboard() {
           </div>
         ) : (
           <>
-            {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <Card className="p-4 bg-card border-border">
                 <div className="flex items-center justify-between">
@@ -312,7 +308,7 @@ export default function TrainerDashboard() {
 
                     <div className="flex items-center gap-2">
                       <Button variant="outline" size="sm" asChild>
-                        <Link href={`/trainer/${userId}/students/${student.id}`}>Ver Detalhes</Link>
+                        <Link href={`/trainer/${trainerId}/students/${student.id}`}>Ver Detalhes</Link>
                       </Button>
                       <Button variant="ghost" size="icon">
                         <MoreVertical className="h-4 w-4" />
@@ -359,7 +355,7 @@ export default function TrainerDashboard() {
                   </p>
                 </div>
                 <Button asChild>
-                  <Link href={`/trainer/${userId}/diets`}>
+                  <Link href={`/trainer/${trainerId}/diets`}>
                     <Plus className="h-4 w-4 mr-2" />
                     Criar Nova Dieta
                   </Link>

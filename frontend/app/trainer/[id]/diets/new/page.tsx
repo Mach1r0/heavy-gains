@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Plus, GripVertical, Trash2, Save } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
 import { createDietPlan } from "@/lib/api"
@@ -43,6 +43,7 @@ interface Student {
 
 export default function NewDietPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [dietName, setDietName] = useState("")
   const [category, setCategory] = useState("")
@@ -228,9 +229,11 @@ export default function NewDietPage() {
         description: "Dieta criada com sucesso",
       })
 
-      // Redirecionar para lista de dietas
-      console.log('Redirecting to:', `/trainer/${userId}/diets`)
-      router.push(`/trainer/${userId}/diets`)
+      // Redirecionar: se veio com ?student= na URL, voltar para a página do aluno
+      const fromStudent = searchParams?.get('student')
+      const redirectTo = fromStudent ? `/trainer/${userId}/students/${fromStudent}` : `/trainer/${userId}/diets`
+      console.log('Redirecting to:', redirectTo)
+      router.push(redirectTo)
     } catch (error: any) {
       console.error('Error saving diet:', error)
       console.error('Error response:', error.response)
@@ -256,7 +259,13 @@ export default function NewDietPage() {
     }
   }, [])
 
-  // Fetch teacher's students
+  useEffect(() => {
+    const preset = searchParams?.get('student')
+    if (preset) {
+      setStudentId(preset)
+    }
+  }, [searchParams])
+
   useEffect(() => {
     const fetchStudents = async () => {
       if (!userId) return
@@ -264,9 +273,14 @@ export default function NewDietPage() {
       try {
         setLoadingStudents(true)
         const teacher = await getTeacherByUserId(userId)
-  const studentsData = await getTeacherStudents()
+        const studentsData = await getTeacherStudents()
         console.log('Students fetched:', studentsData)
         setStudents(studentsData)
+        const presetStudentId = searchParams?.get('student')
+        if (presetStudentId) {
+          const match = studentsData.find((s: any) => String(s.student_id) === String(presetStudentId))
+          if (match) setStudentId(String(match.student_user_id))
+        }
       } catch (error) {
         console.error('Error fetching students:', error)
         toast({

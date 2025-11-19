@@ -2,175 +2,114 @@
 
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { ArrowLeft, Plus, GripVertical, Trash2, Save } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ArrowLeft, Edit, Trash2, Users, Calendar, Target } from "lucide-react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
+import { getDietPlan } from "@/lib/api/diets"
 
-interface Meal {
-  id: string
-  name: string
-  time: string
-  foods: Food[]
+const goalLabels = {
+  BUK: "Bulking",
+  CUT: "Cutting",
+  MAINT: "Manutenção",
 }
 
-interface Food {
-  id: string
-  name: string
-  quantity: string
-  unit: string
-  calories: string
-  protein: string
-  carbs: string
-  fat: string
+const goalColors = {
+  BUK: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+  CUT: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  MAINT: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
 }
 
-// Mock data
-const mockDiet = {
-  id: 1,
-  name: "Dieta Hipertrofia 3000 kcal",
-  category: "hipertrofia",
-  targetCalories: "3000",
-  description: "Plano alimentar focado em ganho de massa muscular com distribuição balanceada de macronutrientes.",
-  meals: [
-    {
-      id: "1",
-      name: "Café da Manhã",
-      time: "07:00",
-      foods: [
-        {
-          id: "1",
-          name: "Aveia",
-          quantity: "80",
-          unit: "g",
-          calories: "304",
-          protein: "10.7",
-          carbs: "54.8",
-          fat: "5.4",
-        },
-        {
-          id: "2",
-          name: "Banana",
-          quantity: "1",
-          unit: "un",
-          calories: "105",
-          protein: "1.3",
-          carbs: "27",
-          fat: "0.4",
-        },
-      ],
-    },
-  ],
-}
+export default function DietDetailPage() {
+  const params = useParams()
+  const searchParams = useSearchParams()
+  const dietId = params?.dietId as string
+  const userId = params?.id as string
+  const studentId = searchParams.get('student')
+  
+  const [loading, setLoading] = useState(true)
+  const [diet, setDiet] = useState<any>(null)
 
-export default function EditDietPage() {
-  const [dietName, setDietName] = useState(mockDiet.name)
-  const [category, setCategory] = useState(mockDiet.category)
-  const [targetCalories, setTargetCalories] = useState(mockDiet.targetCalories)
-  const [description, setDescription] = useState(mockDiet.description)
-  const [meals, setMeals] = useState<Meal[]>(mockDiet.meals)
-
-  const addMeal = () => {
-    const newMeal: Meal = {
-      id: Date.now().toString(),
-      name: "",
-      time: "",
-      foods: [
-        { id: Date.now().toString(), name: "", quantity: "", unit: "g", calories: "", protein: "", carbs: "", fat: "" },
-      ],
+  useEffect(() => {
+    if (dietId) {
+      fetchDiet()
     }
-    setMeals([...meals, newMeal])
+  }, [dietId])
+
+  const fetchDiet = async () => {
+    try {
+      setLoading(true)
+      const dietData = await getDietPlan(dietId)
+      console.log('Diet data:', dietData)
+      setDiet(dietData)
+    } catch (error) {
+      console.error('Error fetching diet:', error)
+      alert('Erro ao carregar dieta')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const removeMeal = (mealId: string) => {
-    setMeals(meals.filter((m) => m.id !== mealId))
-  }
-
-  const updateMeal = (mealId: string, field: keyof Meal, value: string) => {
-    setMeals(meals.map((m) => (m.id === mealId ? { ...m, [field]: value } : m)))
-  }
-
-  const addFood = (mealId: string) => {
-    setMeals(
-      meals.map((m) =>
-        m.id === mealId
-          ? {
-              ...m,
-              foods: [
-                ...m.foods,
-                {
-                  id: Date.now().toString(),
-                  name: "",
-                  quantity: "",
-                  unit: "g",
-                  calories: "",
-                  protein: "",
-                  carbs: "",
-                  fat: "",
-                },
-              ],
-            }
-          : m,
-      ),
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div>Carregando dieta...</div>
+      </div>
     )
   }
 
-  const removeFood = (mealId: string, foodId: string) => {
-    setMeals(meals.map((m) => (m.id === mealId ? { ...m, foods: m.foods.filter((f) => f.id !== foodId) } : m)))
-  }
-
-  const updateFood = (mealId: string, foodId: string, field: keyof Food, value: string) => {
-    setMeals(
-      meals.map((m) =>
-        m.id === mealId ? { ...m, foods: m.foods.map((f) => (f.id === foodId ? { ...f, [field]: value } : f)) } : m,
-      ),
+  if (!diet) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div>Dieta não encontrada</div>
+      </div>
     )
   }
 
-
-    const pathname = usePathname()
-    const [userId, setUserId] = useState<string | null>(null)
-
-    useEffect(() => {
-      const user = authApi.getUserFromStorage()
-      if (user) {
-        setUserId(user.id.toString())
-      }
-    }, [])
-
-    if (!userId) {
-      return null
-    }
+  const totalCalories = diet.meals?.reduce((total: number, meal: any) => {
+    const mealCalories = meal.food_items?.reduce((mealTotal: number, item: any) => {
+      return mealTotal + (item.food_item?.calories || 0) * (item.quantity / 100)
+    }, 0) || 0
+    return total + mealCalories
+  }, 0) || 0
   
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-10">
+      <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" asChild>
-                <Link href={`/trainer/${userId}/diets/`}>
+                <Link href={studentId ? `/trainer/${userId}/students/${studentId}` : `/trainer/${userId}/diets`}>
                   <ArrowLeft className="h-5 w-5" />
                 </Link>
               </Button>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Editar Dieta</h1>
-                <p className="text-sm text-muted-foreground">Atualize as informações da dieta</p>
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-2xl font-bold text-foreground">{diet.name}</h1>
+                  <Badge className={goalColors[diet.goal as keyof typeof goalColors]}>
+                    {goalLabels[diet.goal as keyof typeof goalLabels]}
+                  </Badge>
+                  {diet.is_active && <Badge>Ativa</Badge>}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {diet.student?.first_name} {diet.student?.last_name}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" asChild>
-                <Link href={`/trainer/diets/${mockDiet.id}`}>Cancelar</Link>
+                <Link href={`/trainer/${userId}/diets/${dietId}/edit${studentId ? `?student=${studentId}` : ''}`}>
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Link>
               </Button>
-              <Button>
-                <Save className="h-4 w-4 mr-2" />
-                Salvar Alterações
+              <Button variant="outline">
+                <Trash2 className="h-4 w-4 mr-2 text-destructive" />
+                Excluir
               </Button>
             </div>
           </div>
@@ -178,249 +117,110 @@ export default function EditDietPage() {
       </header>
 
       <div className="container mx-auto px-4 py-6 max-w-4xl">
+        {/* Student Info */}
+        <Link href={`/trainer/${userId}/students/${diet.student?.id}`}>
+          <Card className="p-6 bg-card border-border mb-6 hover:border-primary/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <Users className="h-8 w-8 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm text-muted-foreground">Aluno (clique para ver perfil)</p>
+                <p className="text-xl font-bold text-foreground">
+                  {diet.student?.first_name} {diet.student?.last_name}
+                </p>
+                <p className="text-sm text-muted-foreground">@{diet.student?.username}</p>
+              </div>
+            </div>
+          </Card>
+        </Link>
+
         {/* Diet Info */}
         <Card className="p-6 bg-card border-border mb-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4">Informações da Dieta</h2>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome da Dieta</Label>
-              <Input
-                id="name"
-                placeholder="Ex: Dieta Hipertrofia 3000 kcal"
-                value={dietName}
-                onChange={(e) => setDietName(e.target.value)}
-              />
-            </div>
+          <h2 className="text-lg font-semibold text-foreground mb-4">Informações Gerais</h2>
+          
+          {diet.description && (
+            <p className="text-muted-foreground mb-4">{diet.description}</p>
+          )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoria</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger id="category">
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="hipertrofia">Hipertrofia</SelectItem>
-                    <SelectItem value="emagrecimento">Emagrecimento</SelectItem>
-                    <SelectItem value="manutencao">Manutenção</SelectItem>
-                    <SelectItem value="lowcarb">Low Carb</SelectItem>
-                    <SelectItem value="vegetariana">Vegetariana</SelectItem>
-                  </SelectContent>
-                </Select>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <Target className="h-5 w-5 text-primary" />
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="calories">Meta de Calorias (kcal)</Label>
-                <Input
-                  id="calories"
-                  type="number"
-                  placeholder="2500"
-                  value={targetCalories}
-                  onChange={(e) => setTargetCalories(e.target.value)}
-                />
+              <div>
+                <p className="text-2xl font-bold text-foreground">
+                  {diet.target_calories || totalCalories.toFixed(0)}
+                </p>
+                <p className="text-xs text-muted-foreground">kcal/dia</p>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Descrição (opcional)</Label>
-              <Textarea
-                id="description"
-                placeholder="Adicione observações sobre a dieta..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={3}
-              />
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-blue-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  {new Date(diet.start_date).toLocaleDateString("pt-BR")}
+                </p>
+                <p className="text-xs text-muted-foreground">Data de início</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{diet.meals?.length || 0}</p>
+                <p className="text-xs text-muted-foreground">Refeições</p>
+              </div>
             </div>
           </div>
         </Card>
 
-        {/* Meals - Same structure as new page */}
+        {/* Meals */}
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-foreground">Refeições</h2>
-            <Button onClick={addMeal} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Refeição
-            </Button>
-          </div>
-
-          {meals.map((meal, mealIndex) => (
+          <h2 className="text-lg font-semibold text-foreground">Refeições</h2>
+          
+          {diet.meals?.map((meal: any, index: number) => (
             <Card key={meal.id} className="p-4 bg-card border-border">
-              <div className="flex items-start gap-3">
-                <div className="mt-6 cursor-move">
-                  <GripVertical className="h-5 w-5 text-muted-foreground" />
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-foreground">{meal.name}</h3>
+                  <Badge variant="outline">{meal.time}</Badge>
                 </div>
+                {meal.description && (
+                  <p className="text-sm text-muted-foreground">{meal.description}</p>
+                )}
+              </div>
 
-                <div className="flex-1 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Refeição {mealIndex + 1}</Label>
-                    {meals.length > 1 && (
-                      <Button variant="ghost" size="icon" onClick={() => removeMeal(meal.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label htmlFor={`meal-name-${meal.id}`}>Nome da Refeição</Label>
-                      <Input
-                        id={`meal-name-${meal.id}`}
-                        placeholder="Ex: Café da Manhã"
-                        value={meal.name}
-                        onChange={(e) => updateMeal(meal.id, "name", e.target.value)}
-                      />
+              <div className="space-y-3">
+                {meal.food_items?.map((item: any) => (
+                  <div key={item.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div>
+                      <p className="font-medium text-foreground">{item.food_item?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.quantity}{item.unit}
+                      </p>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor={`meal-time-${meal.id}`}>Horário</Label>
-                      <Input
-                        id={`meal-time-${meal.id}`}
-                        type="time"
-                        value={meal.time}
-                        onChange={(e) => updateMeal(meal.id, "time", e.target.value)}
-                      />
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-foreground">
+                        {((item.food_item?.calories || 0) * (item.quantity / 100)).toFixed(0)} kcal
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        P: {((item.food_item?.protein || 0) * (item.quantity / 100)).toFixed(1)}g • 
+                        C: {((item.food_item?.carbs || 0) * (item.quantity / 100)).toFixed(1)}g • 
+                        G: {((item.food_item?.fats || 0) * (item.quantity / 100)).toFixed(1)}g
+                      </p>
                     </div>
                   </div>
-
-                  <div className="space-y-3 pl-4 border-l-2 border-border">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Alimentos</Label>
-                      <Button onClick={() => addFood(meal.id)} variant="ghost" size="sm">
-                        <Plus className="h-3 w-3 mr-1" />
-                        Adicionar Alimento
-                      </Button>
-                    </div>
-
-                    {meal.foods.map((food, foodIndex) => (
-                      <div key={food.id} className="space-y-3 p-3 bg-muted/30 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-muted-foreground">Alimento {foodIndex + 1}</span>
-                          {meal.foods.length > 1 && (
-                            <Button variant="ghost" size="icon" onClick={() => removeFood(meal.id, food.id)}>
-                              <Trash2 className="h-3 w-3 text-destructive" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1">
-                            <Label htmlFor={`food-name-${food.id}`} className="text-xs">
-                              Nome
-                            </Label>
-                            <Input
-                              id={`food-name-${food.id}`}
-                              placeholder="Ex: Aveia"
-                              value={food.name}
-                              onChange={(e) => updateFood(meal.id, food.id, "name", e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label htmlFor={`food-quantity-${food.id}`} className="text-xs">
-                                Qtd
-                              </Label>
-                              <Input
-                                id={`food-quantity-${food.id}`}
-                                type="number"
-                                placeholder="100"
-                                value={food.quantity}
-                                onChange={(e) => updateFood(meal.id, food.id, "quantity", e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label htmlFor={`food-unit-${food.id}`} className="text-xs">
-                                Unidade
-                              </Label>
-                              <Select
-                                value={food.unit}
-                                onValueChange={(value) => updateFood(meal.id, food.id, "unit", value)}
-                              >
-                                <SelectTrigger id={`food-unit-${food.id}`} className="h-8 text-sm">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="g">g</SelectItem>
-                                  <SelectItem value="ml">ml</SelectItem>
-                                  <SelectItem value="un">un</SelectItem>
-                                  <SelectItem value="col">col</SelectItem>
-                                  <SelectItem value="xic">xíc</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-4 gap-2">
-                          <div className="space-y-1">
-                            <Label htmlFor={`food-calories-${food.id}`} className="text-xs">
-                              Calorias
-                            </Label>
-                            <Input
-                              id={`food-calories-${food.id}`}
-                              type="number"
-                              placeholder="150"
-                              value={food.calories}
-                              onChange={(e) => updateFood(meal.id, food.id, "calories", e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor={`food-protein-${food.id}`} className="text-xs">
-                              Prot (g)
-                            </Label>
-                            <Input
-                              id={`food-protein-${food.id}`}
-                              type="number"
-                              placeholder="5"
-                              value={food.protein}
-                              onChange={(e) => updateFood(meal.id, food.id, "protein", e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor={`food-carbs-${food.id}`} className="text-xs">
-                              Carb (g)
-                            </Label>
-                            <Input
-                              id={`food-carbs-${food.id}`}
-                              type="number"
-                              placeholder="25"
-                              value={food.carbs}
-                              onChange={(e) => updateFood(meal.id, food.id, "carbs", e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1">
-                            <Label htmlFor={`food-fat-${food.id}`} className="text-xs">
-                              Gord (g)
-                            </Label>
-                            <Input
-                              id={`food-fat-${food.id}`}
-                              type="number"
-                              placeholder="3"
-                              value={food.fat}
-                              onChange={(e) => updateFood(meal.id, food.id, "fat", e.target.value)}
-                              className="h-8 text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                ))}
               </div>
             </Card>
           ))}
         </div>
-
-        <Button onClick={addMeal} variant="outline" className="w-full bg-transparent">
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Refeição
-        </Button>
       </div>
     </div>
   )

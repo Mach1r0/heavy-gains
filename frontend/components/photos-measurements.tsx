@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Calendar, TrendingUp, TrendingDown, Minus, ImageIcon } from "lucide-react"
+import { apiClient } from "@/lib/api/client"
 
 interface BodyMeasurement {
   id: number
@@ -30,6 +31,7 @@ interface ProgressPhoto {
   photo_type: "FRONT" | "SIDE" | "BACK"
   image: string
   created_at: string
+  notes?: string
 }
 
 const photoTypeLabels = {
@@ -38,69 +40,31 @@ const photoTypeLabels = {
   BACK: "Costas",
 }
 
-export function PhotosMeasurements({ studentId }: { studentId: string }) {
+export function PhotosMeasurements({ studentId, userId }: { studentId: string; userId: string }) {
   const [measurements, setMeasurements] = useState<BodyMeasurement[]>([])
   const [photos, setPhotos] = useState<ProgressPhoto[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Fetch measurements and photos from API
-    // Mock data for now
-    const mockMeasurements: BodyMeasurement[] = [
-      {
-        id: 1,
-        date: "2025-01-15",
-        weight_kg: 75.5,
-        body_fat_percent: 15.2,
-        muscle_mass_kg: 64.0,
-        chest_cm: 102,
-        waist_cm: 82,
-        bicep_left_cm: 38,
-        bicep_right_cm: 38.5,
-        thigh_left_cm: 58,
-        thigh_right_cm: 58.5,
-        notes: "Primeira avaliação do mês",
-      },
-      {
-        id: 2,
-        date: "2025-01-01",
-        weight_kg: 76.2,
-        body_fat_percent: 16.0,
-        muscle_mass_kg: 63.5,
-        chest_cm: 101,
-        waist_cm: 84,
-        bicep_left_cm: 37.5,
-        bicep_right_cm: 38,
-        thigh_left_cm: 57.5,
-        thigh_right_cm: 58,
-      },
-    ]
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        // Fetch measurements
+        const measurementsResponse = await apiClient.get(`/analytics/body-measurements/?user=${userId}`)
+        setMeasurements(measurementsResponse.data)
+        
+        // Fetch photos
+        const photosResponse = await apiClient.get(`/analytics/progress-photos/?user=${userId}`)
+        setPhotos(photosResponse.data)
+      } catch (error) {
+        console.error('Error fetching data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    const mockPhotos: ProgressPhoto[] = [
-      {
-        id: 1,
-        photo_type: "FRONT",
-        image: "/fitness-progress-front.png",
-        created_at: "2025-01-15T10:00:00Z",
-      },
-      {
-        id: 2,
-        photo_type: "SIDE",
-        image: "/fitness-progress-side.png",
-        created_at: "2025-01-15T10:01:00Z",
-      },
-      {
-        id: 3,
-        photo_type: "BACK",
-        image: "/fitness-progress-back.png",
-        created_at: "2025-01-15T10:02:00Z",
-      },
-    ]
-
-    setMeasurements(mockMeasurements)
-    setPhotos(mockPhotos)
-    setLoading(false)
-  }, [studentId])
+    fetchData()
+  }, [userId])
 
   if (loading) {
     return <div className="text-center py-8">Carregando dados...</div>
@@ -126,7 +90,6 @@ export function PhotosMeasurements({ studentId }: { studentId: string }) {
         </TabsList>
 
         <TabsContent value="measurements" className="mt-6 space-y-6">
-          {/* Latest Measurements Summary */}
           {latestMeasurement && (
             <Card>
               <CardHeader>
@@ -290,6 +253,9 @@ export function PhotosMeasurements({ studentId }: { studentId: string }) {
                               {new Date(photo.created_at).toLocaleDateString("pt-BR")}
                             </span>
                           </div>
+                          {photo.notes && (
+                            <p className="text-xs text-muted-foreground">Observações: {photo.notes}</p>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -312,6 +278,9 @@ export function PhotosMeasurements({ studentId }: { studentId: string }) {
                             <p className="text-xs text-muted-foreground text-center">
                               {new Date(photo.created_at).toLocaleDateString("pt-BR")}
                             </p>
+                            {photo.notes && (
+                              <p className="text-[10px] text-muted-foreground text-center">{photo.notes}</p>
+                            )}
                           </div>
                         ))}
                       </div>

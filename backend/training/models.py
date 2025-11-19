@@ -1,5 +1,26 @@
 from django.db import models
 
+class Program(models.Model):
+    """Training program that groups multiple trainings (e.g., ABC, Upper/Lower, PPL)"""
+    GOAL_CHOICES = [ 
+        ('STR', 'Strength'),
+        ('HYP', 'Hypertrophy'),
+        ('END', 'Endurance'),
+        ('WL', 'Weight Loss'),
+        ('GEN', 'General Fitness'),
+    ]
+    
+    name = models.CharField(max_length=100, help_text="Program name (e.g., ABC, Upper Lower)")
+    description = models.TextField(blank=True, null=True)
+    teacher = models.ForeignKey('teachers.Teacher', on_delete=models.CASCADE, related_name='programs')
+    goal = models.CharField(max_length=5, choices=GOAL_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.name} - {self.get_goal_display()}"
+
 class Training(models.Model):
     GOAL_CHOICES = [ 
         ('STR', 'Strength'),
@@ -11,9 +32,10 @@ class Training(models.Model):
 
     student = models.ForeignKey('student.Student', on_delete=models.CASCADE, related_name='StudentTraining')
     teacher = models.ForeignKey('teachers.Teacher', on_delete=models.CASCADE, related_name='TeacherTraining')
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='trainings', null=True, blank=True, help_text="If part of a program, link to the program")
     goal = models.CharField(max_length=5, choices=GOAL_CHOICES)
     name = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(blank=True, null=True)
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)

@@ -19,7 +19,7 @@ export default function HomePage() {
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-md group-hover:blur-lg transition-all" />
             </div>
             <span className="text-2xl font-black text-primary">
-                Heavy Gains
+                Overload Gainz
             </span>
           </Link>
           <nav className="flex items-center gap-3">
@@ -141,10 +141,10 @@ export default function HomePage() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Dumbbell className="h-5 w-5 text-primary" />
-            <span className="font-bold text-lg">Heavy Gains</span>
+            <span className="font-bold text-lg">Overload Gainz</span>
           </div>
           <p className="text-sm text-muted-foreground">
-            © 2025 Heavy Gains. Transformando corpos e mentes.
+            © 2025 Overload Gainz. Transformando corpos e mentes.
           </p>
         </div>
       </footer>

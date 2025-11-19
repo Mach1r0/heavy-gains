@@ -1,5 +1,5 @@
 """
-Database Seeding Script for Heavy Gains
+Database Seeding Script for Overload Gainz
 Run this script to populate the database with sample data
 Usage: python manage.py shell < seed_database.py
 Or: python seed_database.py (if running as management command)
@@ -11,7 +11,6 @@ from datetime import datetime, timedelta, time
 from django.utils import timezone
 from decimal import Decimal
 
-# Setup Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 django.setup()
 

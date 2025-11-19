@@ -31,7 +31,7 @@ export function NavHeader() {
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Dumbbell className="h-6 w-6 text-primary" />
-            <span className="text-xl font-semibold">Heavy Gains</span>
+            <span className="text-xl font-semibold">Overload Gainz</span>
           </Link>
 
           <nav className="flex items-center gap-2">

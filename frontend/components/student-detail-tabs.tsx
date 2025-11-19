@@ -11,10 +11,11 @@ import Link from "next/link"
 import { DietManagement } from "@/components/diet-management"
 import { TrainingManagement } from "@/components/training-management"
 import { PhotosMeasurements } from "@/components/photos-measurements"
+import { apiClient } from "@/lib/api/client"
 
 interface Student {
   id: number
-  user: {
+  user_data: {
     id: number
     username: string
     email: string
@@ -28,30 +29,25 @@ interface Student {
   phone_number?: string
 }
 
-export function StudentDetailTabs({ studentId }: { studentId: string }) {
+export function StudentDetailTabs({ studentId, trainerId }: { studentId: string, trainerId: string }) {
   const [student, setStudent] = useState<Student | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // TODO: Fetch student from API
-    // Mock data for now
-    const mockStudent: Student = {
-      id: Number.parseInt(studentId),
-      user: {
-        id: 1,
-        username: "joao_silva",
-        email: "joao@example.com",
-        first_name: "João",
-        last_name: "Silva",
-      },
-      age: 25,
-      weight: 75,
-      height: 1.75,
-      phone_number: "+55 11 98765-4321",
+    const fetchStudent = async () => {
+      try {
+        setLoading(true)
+        const response = await apiClient.get(`/students/${studentId}/`)
+        console.log('Student data:', response.data)
+        setStudent(response.data)
+      } catch (error) {
+        console.error('Error fetching student:', error)
+      } finally {
+        setLoading(false)
+      }
     }
 
-    setStudent(mockStudent)
-    setLoading(false)
+    fetchStudent()
   }, [studentId])
 
   if (loading) {
@@ -62,19 +58,22 @@ export function StudentDetailTabs({ studentId }: { studentId: string }) {
     return <div className="text-center py-8">Aluno não encontrado</div>
   }
 
-  const fullName = `${student.user.first_name} ${student.user.last_name}`.trim() || student.user.username
+  const fullName = `${student.user_data.first_name} ${student.user_data.last_name}`.trim() || student.user_data.username
   const initials = fullName
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2)
+  
+  // Extract user_id for passing to components that need to filter by user
+  const userId = student.user_data.id.toString()
 
   return (
     <div className="space-y-6">
       {/* Back Button */}
       <Button variant="ghost" asChild>
-        <Link href="/students" className="flex items-center gap-2">
+        <Link href={`/trainer/${trainerId}/students`} className="flex items-center gap-2">
           <ArrowLeft className="h-4 w-4" />
           Voltar para Alunos
         </Link>
@@ -85,15 +84,15 @@ export function StudentDetailTabs({ studentId }: { studentId: string }) {
         <CardHeader>
           <div className="flex items-start gap-4">
             <Avatar className="h-20 w-20">
-              <AvatarImage src={student.user.profile_picture || "/placeholder.svg"} />
+              <AvatarImage src={student.user_data.profile_picture || "/placeholder.svg"} />
               <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
               <CardTitle className="text-2xl mb-2">{fullName}</CardTitle>
               <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                <span>@{student.user.username}</span>
+                <span>@{student.user_data.username}</span>
                 <span>•</span>
-                <span>{student.user.email}</span>
+                <span>{student.user_data.email}</span>
                 {student.phone_number && (
                   <>
                     <span>•</span>
@@ -107,12 +106,6 @@ export function StudentDetailTabs({ studentId }: { studentId: string }) {
                 {student.height && <Badge variant="secondary">{student.height} m</Badge>}
               </div>
             </div>
-            <Button asChild>
-              <Link href={`/students/${studentId}/edit`} className="flex items-center gap-2">
-                <Pencil className="h-4 w-4" />
-                Editar
-              </Link>
-            </Button>
           </div>
         </CardHeader>
       </Card>
@@ -125,15 +118,15 @@ export function StudentDetailTabs({ studentId }: { studentId: string }) {
         </TabsList>
 
         <TabsContent value="diets" className="mt-6">
-          <DietManagement studentId={studentId} />
+          <DietManagement studentId={studentId} userId={userId} />
         </TabsContent>
 
         <TabsContent value="training" className="mt-6">
-          <TrainingManagement studentId={studentId} />
+          <TrainingManagement studentId={studentId} userId={userId} />
         </TabsContent>
 
         <TabsContent value="progress" className="mt-6">
-          <PhotosMeasurements studentId={studentId} />
+          <PhotosMeasurements studentId={studentId} userId={userId} />
         </TabsContent>
       </Tabs>
     </div>

@@ -20,8 +20,25 @@ export default function WorkoutsPage() {
   useEffect(() => {
     async function fetchWorkouts() {
       try {
-        const response = await apiClient.get('/training/')
-        setWorkouts(response.data)
+        const user = authApi.getUserFromStorage()
+        console.log('User from storage:', user)
+        
+        if (user) {
+          const teacherResponse = await apiClient.get(`/trainer/teachers/?user=${user.id}`)
+          console.log('Teacher response:', teacherResponse.data)
+          const teacher = teacherResponse.data[0]
+          
+          if (teacher) {
+            console.log('Fetching workouts for teacher:', teacher.id)
+            const response = await apiClient.get(`/training/grouped_by_name/?teacher=${teacher.id}`)
+            console.log('Grouped workouts response:', response.data)
+            setWorkouts(response.data)
+          } else {
+            console.error('No teacher found for user')
+          }
+        } else {
+          console.error('No user in storage')
+        }
       } catch (error) {
         console.error('Erro ao buscar treinos:', error)
       } finally {
@@ -38,41 +55,23 @@ export default function WorkoutsPage() {
     }
   }, [])
 
-  // Group trainings by name and aggregate students
-  const groupedWorkouts = workouts.reduce((acc: any, workout: any) => {
-    const name = workout.name || 'Sem nome'
-    
-    if (!acc[name]) {
-      acc[name] = {
-        ...workout,
-        studentCount: 1,
-        studentIds: [workout.student],
-        ids: [workout.id]
-      }
-    } else {
-      acc[name].studentCount += 1
-      acc[name].studentIds.push(workout.student)
-      acc[name].ids.push(workout.id)
-    }
-    
-    return acc
-  }, {})
-
-  // Convert to array and filter by search
-  const groupedWorkoutsArray = Object.values(groupedWorkouts).filter((workout: any) =>
+  const filteredWorkouts = workouts.filter((workout: any) =>
     workout.name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
+
+  console.log('Workouts state:', workouts)
+  console.log('Filtered workouts:', filteredWorkouts)
 
   if (!userId) {
     return null
   }
+  
   if (loading) {
     return <div>Carregando treinos...</div>
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b border-border bg-card">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -109,9 +108,8 @@ export default function WorkoutsPage() {
           />
         </div>
 
-        {/* Workouts Grid */}
         <div className="grid gap-4">
-          {groupedWorkoutsArray.map((workout: any) => (
+          {filteredWorkouts.map((workout: any) => (
             <Card key={workout.name} className="p-4 bg-card border-border hover:border-primary/50 transition-colors">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4 flex-1">
@@ -125,12 +123,12 @@ export default function WorkoutsPage() {
                       <Badge variant="secondary">{workout.category || 'Treino'}</Badge>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{workout.exercises || 0} exercícios</span>
+                      <span>{workout.exercises || 0} exercício{(workout.exercises || 0) !== 1 ? 's' : ''}</span>
                       <span className="flex items-center gap-1">
                         <Users className="h-3 w-3" />
-                        {workout.studentCount} {workout.studentCount === 1 ? 'aluno' : 'alunos'}
+                        {workout.student_count || 0} {(workout.student_count) === 1 ? 'aluno' : 'alunos'}
                       </span>
-                      <span>Usado em {workout.lastUsed ? new Date(workout.lastUsed).toLocaleDateString("pt-BR") : "-"}</span>
+                      <span>Criado em {workout.start_date ? new Date(workout.start_date).toLocaleDateString("pt-BR") : "-"}</span>
                     </div>
                   </div>
                 </div>
@@ -148,7 +146,7 @@ export default function WorkoutsPage() {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/trainer/${userId}/workouts/${workout.id}`}>Ver Detalhes</Link>
+                    <Link href={`/trainer/${userId}/workouts/${encodeURIComponent(workout.name)}`}>Ver Detalhes</Link>
                   </Button>
                 </div>
               </div>

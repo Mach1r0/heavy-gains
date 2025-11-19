@@ -114,7 +114,7 @@ export function SidebarNav({ userType }: SidebarNavProps) {
         <div className="flex h-16 items-center border-b border-sidebar-border px-6">
           <Link href={dashboardUrl} className="flex items-center gap-2">
             <Dumbbell className="h-6 w-6 text-primary" />
-            <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Heavy Gains</span>
+            <span className="ml-2 text-lg font-semibold text-sidebar-foreground">Overload Gainz</span>
           </Link>
         </div>
 

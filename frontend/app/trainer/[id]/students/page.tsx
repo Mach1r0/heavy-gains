@@ -4,12 +4,13 @@ import { StudentsList } from "@/components/students-list"
 import Link from "next/link"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { usePathname } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { authApi } from "@/lib/api/auth"
 
 export default function StudentsPage() {
-      const pathname = usePathname()
+  const params = useParams()
+  const trainerId = params.id as string
       const [userId, setUserId] = useState<string | null>(null)
     
       useEffect(() => {
@@ -30,7 +31,7 @@ export default function StudentsPage() {
             <h1 className="text-3xl font-bold text-foreground">Meus Alunos</h1>
             <p className="text-muted-foreground mt-2">Gerencie seus alunos, dietas e treinos</p>
           </div>
-          <Link href={`students/new`}>
+          <Link href={`/trainer/${trainerId}/students/new`}>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
               Novo Aluno

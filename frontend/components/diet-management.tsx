@@ -5,9 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Calendar, Target, Edit, Eye } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { DietForm } from "@/components/diet-form"
 import { DietDetails } from "@/components/diet-details"
+import Link from "next/link"
+import { authApi } from "@/lib/api/auth"
+import { getStudentDietPlans } from "@/lib/api/diets"
 
 interface DietPlan {
   id: number
@@ -31,41 +34,34 @@ const goalColors = {
   MAINT: "bg-blue-100 text-blue-800",
 }
 
-export function DietManagement({ studentId }: { studentId: string }) {
+export function DietManagement({ studentId, userId }: { studentId: string; userId: string }) {
   const [diets, setDiets] = useState<DietPlan[]>([])
-  const [loading, setLoading] = useState(true)
+const [loading, setLoading] = useState(true)
   const [selectedDiet, setSelectedDiet] = useState<DietPlan | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
+  const user = authApi.getUserFromStorage()
 
   useEffect(() => {
-    // TODO: Fetch diets from API
-    // Mock data for now
-    const mockDiets: DietPlan[] = [
-      {
-        id: 1,
-        name: "Dieta de Ganho de Massa",
-        goal: "BUK",
-        start_date: "2025-01-01",
-        end_date: "2025-03-31",
-        is_active: true,
-        meals_count: 6,
-      },
-      {
-        id: 2,
-        name: "Dieta de Definição",
-        goal: "CUT",
-        start_date: "2024-10-01",
-        end_date: "2024-12-31",
-        is_active: false,
-        meals_count: 5,
-      },
-    ]
+    const fetchDiets = async () => {
+      try {
+        setLoading(true)
+        const dietsData = await getStudentDietPlans(userId)
+        const dietsWithCount = dietsData.map((diet: any) => ({
+          ...diet,
+          meals_count: diet.meals?.length || 0,
+        }))
+        setDiets(dietsWithCount)
+      } catch (error) {
+        console.error('Error fetching diets:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    setDiets(mockDiets)
-    setLoading(false)
-  }, [studentId])
+    fetchDiets()
+  }, [userId])
 
   const handleEdit = (diet: DietPlan) => {
     setSelectedDiet(diet)
@@ -89,20 +85,14 @@ export function DietManagement({ studentId }: { studentId: string }) {
           <h2 className="text-2xl font-bold">Planos de Dieta</h2>
           <p className="text-muted-foreground">Gerencie as dietas do aluno</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-2">
+        {user && (
+          <Button asChild className="flex items-center gap-2">
+            <Link href={`/trainer/${user.id}/diets/new?student=${studentId}`}>
               <Plus className="h-4 w-4" />
               Nova Dieta
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Criar Nova Dieta</DialogTitle>
-            </DialogHeader>
-            <DietForm studentId={studentId} onSuccess={() => setIsCreateOpen(false)} />
-          </DialogContent>
-        </Dialog>
+            </Link>
+          </Button>
+        )}
       </div>
 
       {diets.length === 0 ? (
@@ -144,24 +134,32 @@ export function DietManagement({ studentId }: { studentId: string }) {
                 </div>
 
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-transparent"
-                    onClick={() => handleView(diet)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Ver Detalhes
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 bg-transparent"
-                    onClick={() => handleEdit(diet)}
-                  >
-                    <Edit className="h-4 w-4 mr-1" />
-                    Editar
-                  </Button>
+                  {user && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-transparent"
+                        asChild
+                      >
+                        <Link href={`/trainer/${user.id}/diets/${diet.id}?student=${studentId}`}>
+                          <Eye className="h-4 w-4 mr-1" />
+                          Ver Detalhes
+                        </Link>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 bg-transparent"
+                        asChild
+                      >
+                        <Link href={`/trainer/${user.id}/diets/${diet.id}/edit?student=${studentId}`}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          Editar
+                        </Link>
+                      </Button>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
