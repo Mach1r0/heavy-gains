@@ -58,6 +58,7 @@ export default function WorkoutsPage() {
     return acc
   }, {})
 
+  // Convert to array and filter by search
   const groupedWorkoutsArray = Object.values(groupedWorkouts).filter((workout: any) =>
     workout.name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
